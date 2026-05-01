@@ -49,8 +49,8 @@ void AppManager::start(const QString& id) {
     auto& rt = m_runtimes[id];
     if (rt.state != AppState::Stopped && rt.state != AppState::Error) return;
 
-    QString exePath = resolve(entry.executable);
     QString workDir = resolve(entry.workingDirectory);
+    QString exePath = QDir(workDir).filePath(entry.executable);
 
     if (!QFileInfo::exists(exePath)) {
         emit logMessage(QString("ERROR: Executable not found: %1").arg(exePath));

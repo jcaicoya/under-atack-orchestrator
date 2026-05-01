@@ -73,14 +73,14 @@ void ConfigureModeScreen::buildUI() {
 
     // App table
     m_table = new QTableWidget(0, 4, this);
-    m_table->setHorizontalHeaderLabels({"Aplicación", "Estado", "Iniciar", "Parar"});
+    m_table->setHorizontalHeaderLabels({"Aplicación", "Iniciar", "Parar", "Estado"});
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
-    m_table->setColumnWidth(1, 120);
-    for (int c = 2; c <= 3; ++c) {
+    for (int c = 1; c <= 2; ++c) {
         m_table->horizontalHeader()->setSectionResizeMode(c, QHeaderView::Fixed);
         m_table->setColumnWidth(c, 90);
     }
+    m_table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed);
+    m_table->setColumnWidth(3, 120);
     m_table->setSelectionMode(QAbstractItemView::NoSelection);
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->setFocusPolicy(Qt::NoFocus);
@@ -178,10 +178,6 @@ void ConfigureModeScreen::populateTable() {
         nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
         m_table->setItem(row, 0, nameItem);
 
-        auto* stateItem = new QTableWidgetItem(stateLabel(AppState::Stopped));
-        stateItem->setForeground(stateColor(AppState::Stopped));
-        m_table->setItem(row, 1, stateItem);
-
         auto* startBtn = new QPushButton("Iniciar", this);
         auto* stopBtn  = new QPushButton("Parar",   this);
         startBtn->setFocusPolicy(Qt::NoFocus);
@@ -192,8 +188,12 @@ void ConfigureModeScreen::populateTable() {
         connect(startBtn, &QPushButton::clicked, this, [this, id]() { m_manager->start(id); });
         connect(stopBtn,  &QPushButton::clicked, this, [this, id]() { m_manager->stop(id);  });
 
-        m_table->setCellWidget(row, 2, startBtn);
-        m_table->setCellWidget(row, 3, stopBtn);
+        m_table->setCellWidget(row, 1, startBtn);
+        m_table->setCellWidget(row, 2, stopBtn);
+
+        auto* stateItem = new QTableWidgetItem(stateLabel(AppState::Stopped));
+        stateItem->setForeground(stateColor(AppState::Stopped));
+        m_table->setItem(row, 3, stateItem);
         m_table->setRowHeight(row, 38);
     }
 }
@@ -211,13 +211,13 @@ void ConfigureModeScreen::updateRow(const QString& id) {
 
     AppState s = m_manager->state(id);
 
-    if (auto* item = m_table->item(row, 1)) {
+    auto* startBtn = qobject_cast<QPushButton*>(m_table->cellWidget(row, 1));
+    auto* stopBtn  = qobject_cast<QPushButton*>(m_table->cellWidget(row, 2));
+
+    if (auto* item = m_table->item(row, 3)) {
         item->setText(stateLabel(s));
         item->setForeground(stateColor(s));
     }
-
-    auto* startBtn = qobject_cast<QPushButton*>(m_table->cellWidget(row, 2));
-    auto* stopBtn  = qobject_cast<QPushButton*>(m_table->cellWidget(row, 3));
 
     bool canStart = (s == AppState::Stopped || s == AppState::Error);
     bool canStop  = (s == AppState::Starting || s == AppState::Running || s == AppState::Stopping);
