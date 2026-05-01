@@ -30,12 +30,13 @@ QString AppManager::resolve(const QString& relativePath) const {
 }
 
 QStringList AppManager::argsFor(const AppEntry& e) const {
-    QStringList args = e.arguments;
+    QStringList args;
     switch (m_mode) {
-        case ShowMode::Configuration: args += e.configurationArguments; break;
-        case ShowMode::Rehearsal:     args += e.rehearsalArguments;     break;
-        case ShowMode::Live:          args += e.liveArguments;          break;
+        case ShowMode::Configure: args << "--configure"; args += e.configurationArguments; break;
+        case ShowMode::Design:    args << "--design";    args += e.rehearsalArguments;     break;
+        case ShowMode::Show:      args << "--show";      args += e.liveArguments;          break;
     }
+    args += e.arguments;
     return args;
 }
 
@@ -65,7 +66,6 @@ void AppManager::start(const QString& id) {
     rt.process = new QProcess(this);
     rt.process->setWorkingDirectory(workDir);
     rt.process->setProgram(exePath);
-    rt.process->setArguments(argsFor(entry));
 
     connect(rt.process, &QProcess::started, this, [this, id]() {
         setState(id, AppState::Running);
@@ -127,10 +127,15 @@ void AppManager::start(const QString& id) {
         setState(id, AppState::Error);
     });
 
+    QStringList args = argsFor(entry);
+    rt.process->setArguments(args);
+
     setState(id, AppState::Starting);
     emit logMessage(QString("Starting %1...").arg(entry.name));
     emit logMessage(QString("  Executable: %1").arg(exePath));
     emit logMessage(QString("  Working dir: %1").arg(workDir));
+    if (!args.isEmpty())
+        emit logMessage(QString("  Args: %1").arg(args.join(' ')));
 
     rt.process->start();
 }

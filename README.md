@@ -1,7 +1,7 @@
 # Cybershow Orchestrator
 
 Versión: 0.1  
-Estado: activo — arquitectura de dos pantallas implementada y verificada.
+Estado: activo — refactorización v0.3 completada.
 
 Centro de control del show Cybershow. Lanza, supervisa y detiene las aplicaciones del show desde una única consola.
 
@@ -137,10 +137,10 @@ Las siguientes reglas del estándar común **no aplican** al orquestador, por di
 - [x] `Esc` desde modo vuelve al selector.
 - [x] `Alt+F4` cierra la aplicación (comportamiento estándar del SO).
 - [x] Sin barra inferior de escenas.
-- [ ] Apps lanzadas con `--configure` desde modo CONFIGURAR. *(Paso 7)*
+- [x] Apps lanzadas con `--configure` desde modo CONFIGURAR.
 - [x] La arquitectura permite añadir `--design` y `--show` más adelante.
-- [ ] Estados de proceso en español. *(Paso 6)*
-- [ ] Textos de operador en español. *(Paso 6)*
+- [x] Estados de proceso en español.
+- [x] Textos de operador en español.
 - [x] Errores visibles y comprensibles para el operador.
 - [x] Compila sin errores.
 - [x] Arranca y muestra el selector de modo.

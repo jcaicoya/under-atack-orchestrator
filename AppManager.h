@@ -6,7 +6,7 @@
 #include "AppConfig.h"
 
 enum class AppState { Stopped, Starting, Running, Stopping, Error };
-enum class ShowMode  { Configuration, Rehearsal, Live };
+enum class ShowMode  { Configure, Design, Show };
 
 struct AppRuntime {
     QProcess* process        = nullptr;
@@ -41,7 +41,7 @@ private:
     QStringList argsFor(const AppEntry& e) const;
 
     QString                   m_packageRoot;
-    ShowMode                  m_mode = ShowMode::Rehearsal;
+    ShowMode                  m_mode = ShowMode::Configure;
     QList<AppEntry>           m_entries;
     QMap<QString, AppRuntime> m_runtimes;
 
