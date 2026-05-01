@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "apps": [
+    {
+      "id": "example_app",
+      "name": "Example App",
+      "description": "Replace with your actual application",
+      "enabled": true,
+      "executable": "apps/ExampleApp/ExampleApp.exe",
+      "workingDirectory": "apps/ExampleApp",
+      "arguments": [],
+      "configurationArguments": [],
+      "rehearsalArguments": [],
+      "liveArguments": [],
+      "startupPolicy": "manual",
+      "closePolicy": "terminateThenKill",
+      "expectedWindowTitle": "",
+      "category": ""
+    }
+  ]
+}
