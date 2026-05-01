@@ -145,4 +145,4 @@ Las siguientes reglas del estándar común **no aplican** al orquestador, por di
 - [x] Compila sin errores.
 - [x] Arranca y muestra el selector de modo.
 - [x] Navegación teclado probada.
-- [ ] Probado en portátil de desarrollo.
+- [x] Probado en portátil de desarrollo.
