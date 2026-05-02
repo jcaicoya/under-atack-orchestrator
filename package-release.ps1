@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root         = $PSScriptRoot
-$buildDir     = Join-Path $root "build\release"
+$buildDir     = Join-Path $root "cmake-build-release"
 $distDir      = Join-Path $root "dist"
 $releasesFile = Join-Path $root "releases.json"
 $staging      = Join-Path $root "_staging"
@@ -39,23 +39,40 @@ Write-Host "  Output : $zipName"
 Write-Host ""
 
 # --- Build ---
-Write-Host ">> Configuring..."
-cmake -S $root -B $buildDir -DCMAKE_BUILD_TYPE=Release 2>&1 | Out-Null
+# Reuse existing cmake configuration (e.g. CLion's Release profile) if present.
+# If not, configure from scratch — cmake will pick the default generator.
+if (-not (Test-Path "$buildDir\CMakeCache.txt")) {
+    Write-Host ">> Configuring (no existing build found)..."
+    cmake -S $root -B $buildDir -DCMAKE_BUILD_TYPE=Release
+    if ($LASTEXITCODE -ne 0) { Write-Error "CMake configure failed."; exit 1 }
+} else {
+    Write-Host ">> Reusing existing cmake configuration in cmake-build-release..."
+}
 
 Write-Host ">> Building Release..."
 cmake --build $buildDir --config Release
 if ($LASTEXITCODE -ne 0) { Write-Error "Build failed."; exit 1 }
 
+# --- Locate build output ---
+# Ninja (CLion default): exe sits directly in $buildDir
+# VS generator: exe sits in $buildDir\Release\
+if (Test-Path "$buildDir\orchestrator.exe") {
+    $out = $buildDir
+} elseif (Test-Path "$buildDir\Release\orchestrator.exe") {
+    $out = "$buildDir\Release"
+} else {
+    Write-Error "orchestrator.exe not found after build. Expected in $buildDir or $buildDir\Release."
+    exit 1
+}
+
 # --- Stage files ---
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
 New-Item -ItemType Directory "$staging\plugins\platforms" | Out-Null
 
-# Placeholder folders matching the intended package structure
 foreach ($folder in @("config", "apps", "media", "sounds", "lights", "logs", "tools")) {
     New-Item -ItemType Directory "$staging\$folder" | Out-Null
 }
 
-$out = Join-Path $buildDir "Release"
 Copy-Item "$out\orchestrator.exe"                       $staging
 Copy-Item "$out\Qt6Core.dll"                            $staging
 Copy-Item "$out\Qt6Gui.dll"                             $staging

@@ -1,6 +1,5 @@
 # CMake / CLion build directories
 cmake-build-*/
-build/
 
 # Packaging
 dist/
