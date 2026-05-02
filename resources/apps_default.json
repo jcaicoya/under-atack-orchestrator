@@ -38,7 +38,7 @@
       "name": "Public wifi",
       "description": "Public wifi attack",
       "enabled": true,
-      "executable": "cibershow-wifi.exe",
+      "executable": "public_wifi.exe",
       "workingDirectory": "C:\\Users\\caico\\Desktop\\CUARZOPOLAR\\bajo-ataque\\public-wifi\\cmake-build-release",
       "arguments": [],
       "configurationArguments": [],
