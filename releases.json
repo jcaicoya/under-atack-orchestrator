@@ -13,6 +13,20 @@
       "date": "2026-05-02T09:24:47",
       "message": "Update apps_default.json",
       "zip": "cybershow-orchestrator-v01.zip"
+    },
+    {
+      "version": 2,
+      "commit": "c7e7c54",
+      "date": "2026-05-02T14:34:46",
+      "message": "Add Rehearsal (DISE├æO) mode with rundown management",
+      "zip": "cybershow-orchestrator-v02.zip"
+    },
+    {
+      "version": 3,
+      "commit": "c601967",
+      "date": "2026-05-02T14:36:13",
+      "message": "Fix package script: include multimedia and FFmpeg DLLs in zip",
+      "zip": "cybershow-orchestrator-v03.zip"
     }
   ]
 }
