@@ -193,7 +193,7 @@ ModeSelectorScreen::ModeSelectorScreen(QWidget* parent)
     struct CardDef { QString title; QString description; bool available; };
     const QVector<CardDef> defs = {
         { "CONFIGURAR", "Preparar aplicaciones,\najustar rutas y\nprobar conexiones.",   true  },
-        { "DISEÑO",     "Ensayo técnico sin\npantallas de\nconfiguración.",               false },
+        { "DISEÑO",     "Ensayo técnico sin\npantallas de\nconfiguración.",               true  },
         { "SHOW",       "Modo seguro para\nla actuación real.",                           false },
     };
 
@@ -249,6 +249,7 @@ void ModeSelectorScreen::keyPressEvent(QKeyEvent* event) {
             break;
         case Qt::Key_2:
             selectCard(1);
+            if (m_cards[1]->isAvailable()) confirmMode(1);
             break;
         case Qt::Key_3:
             selectCard(2);

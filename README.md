@@ -1,7 +1,7 @@
 # Cybershow Orchestrator
 
-Versión: 0.1  
-Estado: activo — refactorización v0.3 completada.
+Versión: 0.2  
+Estado: activo — modo DISEÑO (Rehearsal) implementado.
 
 Centro de control del show Cybershow. Lanza, supervisa y detiene las aplicaciones del show desde una única consola.
 
@@ -34,8 +34,8 @@ El orquestador no usa la navegación estándar por escenas. Su estructura es:
 |---:|---|---|---|---|---|
 | — | selector | Selector de modo | Selector | operative | Pantalla inicial. No numerada. |
 | 1 | configurar | Configurar | Configurar | operative | Control y lanzamiento de apps con `--configure`. |
-| 2 | diseño | Diseño | Diseño | operative | Previsto. Deshabilitado en v0.1. |
-| 3 | show | Show | Show | operative | Previsto. Deshabilitado en v0.1. |
+| 2 | diseño | Diseño | Diseño | operative | Ensayo técnico. Apps con `--design`. Rundown editable. |
+| 3 | show | Show | Show | operative | Previsto. Deshabilitado. |
 
 ---
 
@@ -47,12 +47,13 @@ Elementos:
 - Título: **CYBERSHOW**
 - Subtítulo: *Centro de control*
 - Tres tarjetas de modo: CONFIGURAR, DISEÑO, SHOW
-- DISEÑO y SHOW deshabilitados con etiqueta "próximamente"
+- SHOW deshabilitado con etiqueta "próximamente"
 - Estado general / perfil en la parte inferior (futuro)
 
 Navegación en el selector:
 - `1` → selecciona y abre CONFIGURAR
-- `2`, `3` → enfoca tarjeta (deshabilitada, no abre)
+- `2` → selecciona y abre DISEÑO
+- `3` → enfoca SHOW (deshabilitado, no abre)
 - `←` / `→` → cambia tarjeta enfocada
 - `Enter` / `Espacio` → abre la tarjeta enfocada si está disponible
 - Click → abre la tarjeta pulsada si está disponible
@@ -89,7 +90,44 @@ Navegación:
 
 ---
 
-## 5. Modos del orquestador y argumento de lanzamiento
+## 5. Pantalla de modo: RehearsalModeScreen (DISEÑO)
+
+Pantalla de ensayo técnico. Muestra todos los recursos (apps y multimedia) en un único rundown ordenable.
+
+Elementos:
+- Título: **DISEÑO**
+- Tabla de rundown: orden personalizable, casilla habilitado/deshabilitado por fila, acciones por fila
+- Botón **Parar todo** — para todas las apps y todos los medios
+- Panel de registro de eventos
+
+Columnas de la tabla:
+
+| Col | Contenido |
+|---|---|
+| ▲▼ | Botones de reordenación |
+| Nombre | Nombre del recurso (app o multimedia) |
+| Tipo | `APP` / `VIDEO` / `AUDIO` con color |
+| ✓ | Checkbox de habilitado (persiste en `rundown.json`) |
+| Acción | `Iniciar` (apps) o `Reproducir` (multimedia) |
+| Parar | Para el recurso individual |
+| Estado | Estado actual del proceso o reproducción |
+
+Comportamiento al abrir:
+1. Recarga las bibliotecas de apps y multimedia desde sus configs.
+2. Carga `config/rundown.json`. Si no existe, lo crea vacío.
+3. Sincroniza el rundown con las bibliotecas: añade entradas nuevas (deshabilitadas) y elimina referencias rotas.
+4. Guarda el rundown actualizado.
+
+Config del rundown (`config/rundown.json`): lista ordenada de `{ "type": "app"|"media", "ref": "<id>", "enabled": true|false }`.
+
+Apps lanzadas con argumento `--design`.
+
+Navegación:
+- `Esc` → vuelve al selector de modo
+
+---
+
+## 6. Modos del orquestador y argumento de lanzamiento
 
 | Modo orquestador | Argumento pasado a apps |
 |---|---|
@@ -99,7 +137,7 @@ Navegación:
 
 ---
 
-## 6. Integración con el orquestador (el propio orquestador como cliente)
+## 7. Integración con el orquestador (el propio orquestador como cliente)
 
 El orquestador no es lanzado por otro orquestador. No procesa argumentos de arranque estándar (`--configure`, `--show`, etc.) para sí mismo.
 
@@ -107,7 +145,7 @@ El orquestador sí emite mensajes `CYBERSHOW_*` para posibles integraciones futu
 
 ---
 
-## 7. Excepciones al estándar común
+## 8. Excepciones al estándar común
 
 Las siguientes reglas del estándar común **no aplican** al orquestador, por diseño:
 
@@ -122,14 +160,15 @@ Las siguientes reglas del estándar común **no aplican** al orquestador, por di
 
 ---
 
-## 8. Checklist de refactorización
+## 9. Checklist de refactorización
 
 - [x] Usa `CyberBackgroundWidget` como base de ventana.
 - [x] Usa paleta y botones de `CyberTheme`.
 - [x] No tiene pantalla de setup estándar.
 - [x] Tiene `ModeSelectorScreen` como pantalla inicial.
 - [x] CONFIGURAR disponible y funcional.
-- [x] DISEÑO y SHOW deshabilitados con indicación visual.
+- [x] DISEÑO disponible y funcional (RehearsalModeScreen con rundown).
+- [x] SHOW deshabilitado con indicación visual.
 - [x] `1`, `2`, `3` seleccionan modos en el selector.
 - [x] `Enter` y `Espacio` abren el modo seleccionado.
 - [x] `←` / `→` cambian tarjeta enfocada en el selector.
@@ -148,22 +187,26 @@ Las siguientes reglas del estándar común **no aplican** al orquestador, por di
 
 ---
 
-## 9. Estructura del proyecto
+## 10. Estructura del proyecto
 
 ```
 orchestrator/
 ├── src/
 │   ├── main.cpp
 │   ├── Logger.{h,cpp}
-│   ├── AppConfig.{h,cpp}
-│   ├── AppManager.{h,cpp}
+│   ├── AppConfig.{h,cpp}          ← lista de apps del show
+│   ├── AppManager.{h,cpp}         ← ciclo de vida de procesos (QProcess)
+│   ├── MediaConfig.{h,cpp}        ← lista de archivos multimedia
+│   ├── MediaManager.{h,cpp}       ← reproducción con Qt Multimedia + FFmpeg
+│   ├── RundownConfig.{h,cpp}      ← rundown ordenado (apps + media)
 │   ├── MainWindow.{h,cpp}
 │   └── ui/
 │       ├── CyberTheme.{h,cpp}
 │       ├── CyberBackgroundWidget.{h,cpp}
 │       ├── CyberPanel.{h,cpp}
 │       ├── ModeSelectorScreen.{h,cpp}
-│       └── ConfigureModeScreen.{h,cpp}
+│       ├── ConfigureModeScreen.{h,cpp}
+│       └── RehearsalModeScreen.{h,cpp}
 ├── resources/
 │   └── apps_default.json          ← plantilla embebida (Qt resource)
 ├── resources.qrc
@@ -172,11 +215,17 @@ orchestrator/
 └── releases.json
 ```
 
-En tiempo de ejecución, el orquestador copia `apps_default.json` a `config/apps.json` junto al `.exe` si no existe. Para editar la configuración en uso, editar ese archivo externo, no el recurso embebido.
+Archivos de configuración generados en tiempo de ejecución (junto al `.exe`):
+
+| Archivo | Descripción |
+|---|---|
+| `config/apps.json` | Lista de apps. Copiado de la plantilla embebida si no existe. |
+| `config/media.json` | Lista de archivos multimedia. Creado vacío si no existe. |
+| `config/rundown.json` | Rundown ordenado. Generado/sincronizado al abrir modo DISEÑO. |
 
 ---
 
-## 10. Packaging
+## 11. Packaging
 
 Script: `package-release.ps1`  
 Tracking file: `releases.json` (committed to git)  
@@ -188,7 +237,7 @@ Workflow:
 - `.\package-release.ps1 -Force` — same but skips commit-change check
 - `git push --tags` — push tags to remote after packaging
 
-Zip contents: `orchestrator.exe` + Qt6Core/Gui/Widgets DLLs + `plugins/platforms/qwindows.dll`  
+Zip contents: `orchestrator.exe` + Qt6 DLLs (Core/Gui/Widgets/Multimedia/MultimediaWidgets/Network/OpenGL) + FFmpeg DLLs (avcodec/avformat/avutil/swresample/swscale) + `plugins/platforms/qwindows.dll` + `plugins/multimedia/` (FFmpeg backend)  
 + empty placeholder folders: `config/`, `apps/`, `media/`, `sounds/`, `lights/`, `logs/`, `tools/`
 
 Target machine requires Visual C++ Redistributable (install once).

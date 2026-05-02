@@ -17,12 +17,14 @@ set(SOURCES
     src/AppManager.cpp
     src/MediaConfig.cpp
     src/MediaManager.cpp
+    src/RundownConfig.cpp
     src/MainWindow.cpp
     src/ui/CyberTheme.cpp
     src/ui/CyberBackgroundWidget.cpp
     src/ui/CyberPanel.cpp
     src/ui/ModeSelectorScreen.cpp
     src/ui/ConfigureModeScreen.cpp
+    src/ui/RehearsalModeScreen.cpp
 )
 
 set(HEADERS
@@ -31,12 +33,14 @@ set(HEADERS
     src/AppManager.h
     src/MediaConfig.h
     src/MediaManager.h
+    src/RundownConfig.h
     src/MainWindow.h
     src/ui/CyberTheme.h
     src/ui/CyberBackgroundWidget.h
     src/ui/CyberPanel.h
     src/ui/ModeSelectorScreen.h
     src/ui/ConfigureModeScreen.h
+    src/ui/RehearsalModeScreen.h
 )
 
 add_executable(orchestrator
