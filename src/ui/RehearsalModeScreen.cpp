@@ -201,16 +201,17 @@ void RehearsalModeScreen::setStageWindow(StageWindow* stage) {
     if (!stage) return;
 
     connect(stage, &StageWindow::activated, this, [this](int idx) {
-        m_mediaManager->setStageOutput(m_stageWindow->videoOutput());
         const auto screens = QGuiApplication::screens();
-        if (idx < screens.size())
+        if (idx < screens.size()) {
+            m_mediaManager->setStageGeometry(screens[idx]->geometry());
             m_appManager->setStageGeometry(screens[idx]->geometry());
+        }
         m_stageActivateBtn->setText("Desactivar");
         m_stageWindow->showLogo();
         saveStageConfig(idx);
     });
     connect(stage, &StageWindow::deactivated, this, [this]() {
-        m_mediaManager->setStageOutput(nullptr);
+        m_mediaManager->setStageGeometry({});
         m_appManager->setStageGeometry({});
         m_stageActivateBtn->setText("Activar");
     });
@@ -280,13 +281,15 @@ void RehearsalModeScreen::updateStageControls() {
     m_stageActivateBtn->setText(active ? "Desactivar" : "Activar");
     m_screenCombo->setEnabled(!active);
     if (!active) {
-        if (m_stageWindow) m_mediaManager->setStageOutput(nullptr);
+        m_mediaManager->setStageGeometry({});
+        m_appManager->setStageGeometry({});
     } else {
         const int idx = m_stageWindow->activeScreenIndex();
-        m_mediaManager->setStageOutput(m_stageWindow->videoOutput());
         const auto screens = QGuiApplication::screens();
-        if (idx < screens.size())
+        if (idx < screens.size()) {
+            m_mediaManager->setStageGeometry(screens[idx]->geometry());
             m_appManager->setStageGeometry(screens[idx]->geometry());
+        }
     }
 }
 
@@ -302,9 +305,13 @@ void RehearsalModeScreen::syncAndRefresh() {
     m_mediaConfig.loadFromFile(mediaConfigPath);
     m_mediaManager->loadMedia(m_mediaConfig.items());
 
-    // Ensure stage output is wired after reload
-    if (m_stageWindow && m_stageWindow->isActive())
-        m_mediaManager->setStageOutput(m_stageWindow->videoOutput());
+    // Re-wire stage geometry after reload
+    if (m_stageWindow && m_stageWindow->isActive()) {
+        const int idx = m_stageWindow->activeScreenIndex();
+        const auto screens = QGuiApplication::screens();
+        if (idx >= 0 && idx < screens.size())
+            m_mediaManager->setStageGeometry(screens[idx]->geometry());
+    }
 
     m_rundownPath = QDir(m_packageRoot).filePath("config/rundown.json");
     m_rundownConfig.loadFromFile(m_rundownPath);
@@ -369,9 +376,7 @@ void RehearsalModeScreen::populateTable() {
             if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
         }
         auto* nameItem = new QTableWidgetItem(name);
-        nameItem->setForeground(item.enabled
-            ? CyberTheme::color(CyberTheme::TextPrimary)
-            : CyberTheme::color(CyberTheme::TextMuted));
+        nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
         m_table->setItem(row, 1, nameItem);
 
         // Col 2: Tipo
@@ -390,45 +395,19 @@ void RehearsalModeScreen::populateTable() {
         typeItem->setForeground(typeColor);
         m_table->setItem(row, 2, typeItem);
 
-        // Col 3: Enabled checkbox
-        auto* cbWidget = new QWidget(this);
-        cbWidget->setStyleSheet("background: transparent;");
-        auto* cbLay = new QHBoxLayout(cbWidget);
-        cbLay->setContentsMargins(0, 0, 0, 0);
-        cbLay->setAlignment(Qt::AlignCenter);
-        auto* cb = new QCheckBox(this);
-        cb->setChecked(item.enabled);
-        cb->setFocusPolicy(Qt::NoFocus);
-        cbLay->addWidget(cb);
-        m_table->setCellWidget(row, 3, cbWidget);
-
-        connect(cb, &QCheckBox::toggled, this, [this, row](bool checked) {
-            m_rundownConfig.setEnabled(row, checked);
-            m_rundownConfig.saveToFile(m_rundownPath);
-            if (auto* ni = m_table->item(row, 1))
-                ni->setForeground(checked
-                    ? CyberTheme::color(CyberTheme::TextPrimary)
-                    : CyberTheme::color(CyberTheme::TextMuted));
-        });
-
-        // Col 4: Action button (Iniciar / Reproducir)
+        // Col 3: Action button (Iniciar / Reproducir)
         bool isApp = (item.type == "app");
         auto* actionBtn = new QPushButton(isApp ? "Iniciar" : "Reproducir", this);
         actionBtn->setFocusPolicy(Qt::NoFocus);
-        m_table->setCellWidget(row, 4, actionBtn);
+        m_table->setCellWidget(row, 3, actionBtn);
 
         const QString ref  = item.ref;
         const QString type = item.type;
         connect(actionBtn, &QPushButton::clicked, this, [this, ref, type]() {
-            if (type == "app") {
+            if (type == "app")
                 m_appManager->start(ref);
-            } else {
-                if (m_stageWindow && m_stageWindow->isActive()) {
-                    if (const auto* e = mediaEntryForId(ref); e && e->type == "video")
-                        m_stageWindow->showVideo();
-                }
+            else
                 m_mediaManager->play(ref);
-            }
         });
 
         // Col 5: Stop button
@@ -476,12 +455,12 @@ void RehearsalModeScreen::updateRow(int row) {
         canStop    = (s == MediaState::Playing);
     }
 
-    if (auto* si = m_table->item(row, 6)) {
+    if (auto* si = m_table->item(row, 5)) {
         si->setText(stateLabel);
         si->setForeground(stateColor);
     }
-    if (auto* b = qobject_cast<QPushButton*>(m_table->cellWidget(row, 4))) b->setEnabled(canAction);
-    if (auto* b = qobject_cast<QPushButton*>(m_table->cellWidget(row, 5))) b->setEnabled(canStop);
+    if (auto* b = qobject_cast<QPushButton*>(m_table->cellWidget(row, 3))) b->setEnabled(canAction);
+    if (auto* b = qobject_cast<QPushButton*>(m_table->cellWidget(row, 4))) b->setEnabled(canStop);
 }
 
 int RehearsalModeScreen::rowForRef(const QString& type, const QString& id) const {
@@ -525,9 +504,7 @@ void RehearsalModeScreen::onMediaStateChanged(const QString& id, MediaState stat
         // Route stage display when a video starts or stops
         if (m_stageWindow && m_stageWindow->isActive()) {
             if (const auto* e = mediaEntryForId(id); e && e->type == "video") {
-                if (state == MediaState::Playing)
-                    m_stageWindow->showVideo();
-                else if (state == MediaState::Stopped || state == MediaState::Error)
+                if (state == MediaState::Stopped || state == MediaState::Error)
                     m_stageWindow->showLogo();
             }
         }

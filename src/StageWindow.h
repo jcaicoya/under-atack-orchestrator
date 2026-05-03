@@ -2,13 +2,12 @@
 #include <QWidget>
 
 class QStackedWidget;
-class QVideoWidget;
 class QKeyEvent;
 
 class StageWindow : public QWidget {
     Q_OBJECT
 public:
-    enum class Content { Black, Logo, Video };
+    enum class Content { Black, Logo };
 
     explicit StageWindow(QWidget* parent = nullptr);
 
@@ -18,14 +17,12 @@ public:
     bool    isActive()          const { return isVisible(); }
     int     activeScreenIndex() const { return m_screenIndex; }
     Content currentContent()    const { return m_content; }
-    QVideoWidget* videoOutput() const { return m_videoWidget; }
 
 public slots:
     void showBlack();
     void showLogo();
-    void showVideo();
-    void softHide();   // hide without emitting deactivated
-    void softShow();   // re-show on same screen without emitting activated
+    void softHide();
+    void softShow();
 
 signals:
     void activated(int screenIndex);
@@ -37,7 +34,6 @@ protected:
 
 private:
     QStackedWidget* m_stack       = nullptr;
-    QVideoWidget*   m_videoWidget = nullptr;
     Content         m_content     = Content::Black;
     int             m_screenIndex = -1;
 };

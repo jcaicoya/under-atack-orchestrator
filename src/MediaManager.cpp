@@ -2,6 +2,9 @@
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QVideoWidget>
+#include <QWindow>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QFileInfo>
 #include <algorithm>
 
@@ -34,7 +37,11 @@ void MediaManager::setState(const QString& id, MediaState newState) {
     emit stateChanged(id, newState);
 }
 
-void MediaManager::ensurePlayer(const QString& id, const MediaEntry& entry) {
+void MediaManager::setStageGeometry(const QRect& geo) {
+    m_stageGeometry = geo;
+}
+
+void MediaManager::ensurePlayer(const QString& id, const MediaEntry& /*entry*/) {
     auto& rt = m_runtimes[id];
     if (rt.player) return;
 
@@ -69,18 +76,6 @@ void MediaManager::ensurePlayer(const QString& id, const MediaEntry& entry) {
             emit logMessage(QString("ERROR: %1 — %2").arg(name, errorString));
             setState(id, MediaState::Error);
         });
-
-    if (entry.type == "video") {
-        if (m_stageOutput) {
-            rt.player->setVideoOutput(m_stageOutput);
-        } else {
-            rt.videoWidget = new QVideoWidget();   // parentless = top-level fallback
-            rt.videoWidget->setWindowTitle(entry.name);
-            rt.videoWidget->setAttribute(Qt::WA_DeleteOnClose, false);
-            rt.videoWidget->resize(854, 480);
-            rt.player->setVideoOutput(rt.videoWidget);
-        }
-    }
 }
 
 void MediaManager::play(const QString& id) {
@@ -94,27 +89,59 @@ void MediaManager::play(const QString& id) {
 
     ensurePlayer(id, entry);
 
-    // Re-apply stage output so the renderer gets a now-visible widget
-    // (caller calls showVideo() before play() when stage is active)
-    if (m_stageOutput && entry.type == "video")
-        rt.player->setVideoOutput(m_stageOutput);
-
     if (!QFileInfo::exists(entry.path)) {
         emit logMessage(QString("ERROR: Archivo no encontrado: %1").arg(entry.path));
         setState(id, MediaState::Error);
         return;
     }
 
+    if (entry.type == "video") {
+        const bool wantStage   = !m_stageGeometry.isEmpty();
+        // Detect if existing widget was created for the other mode
+        const bool hasStageWgt = rt.videoWidget &&
+                                  (rt.videoWidget->windowFlags() & Qt::FramelessWindowHint);
+        if (rt.videoWidget && wantStage != bool(hasStageWgt)) {
+            rt.videoWidget->close();
+            delete rt.videoWidget;
+            rt.videoWidget = nullptr;
+        }
+
+        if (wantStage) {
+            if (!rt.videoWidget) {
+                rt.videoWidget = new QVideoWidget();
+                rt.videoWidget->setWindowFlags(
+                    Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+                rt.videoWidget->setAttribute(Qt::WA_DeleteOnClose, false);
+                rt.videoWidget->setStyleSheet("background: black;");
+            }
+            // Pin to the correct screen before showing (same fix as StageWindow).
+            QScreen* targetScreen = nullptr;
+            for (auto* s : QGuiApplication::screens())
+                if (s->geometry() == m_stageGeometry) { targetScreen = s; break; }
+            rt.videoWidget->create();
+            if (rt.videoWidget->windowHandle() && targetScreen)
+                rt.videoWidget->windowHandle()->setScreen(targetScreen);
+
+            rt.videoWidget->setGeometry(m_stageGeometry);
+            rt.player->setVideoOutput(rt.videoWidget);
+            rt.videoWidget->show();
+            rt.videoWidget->raise();
+        } else {
+            // Fallback: floating window for testing without a stage screen
+            if (!rt.videoWidget) {
+                rt.videoWidget = new QVideoWidget();
+                rt.videoWidget->setWindowTitle(entry.name);
+                rt.videoWidget->setAttribute(Qt::WA_DeleteOnClose, false);
+                rt.videoWidget->resize(854, 480);
+                rt.player->setVideoOutput(rt.videoWidget);
+            }
+            rt.videoWidget->show();
+            rt.videoWidget->raise();
+        }
+    }
+
     emit logMessage(QString("Reproduciendo %1...").arg(entry.name));
     emit logMessage(QString("  Archivo: %1").arg(entry.path));
-
-    if (rt.videoWidget) {
-        rt.videoWidget->show();
-        rt.videoWidget->raise();
-    }
-    // If m_stageOutput is set, the caller switches the stage to Video mode
-    // via the stateChanged(Playing) signal — no action needed here.
-
     rt.player->setSource(QUrl::fromLocalFile(entry.path));
     rt.player->play();
 }
@@ -130,33 +157,4 @@ void MediaManager::stopAll() {
     emit logMessage("Parando todos los medios...");
     for (const auto& e : m_entries)
         stop(e.id);
-}
-
-void MediaManager::setStageOutput(QVideoWidget* widget) {
-    m_stageOutput = widget;
-    for (auto it = m_runtimes.begin(); it != m_runtimes.end(); ++it) {
-        MediaRuntime& rt = it.value();
-        if (!rt.player) continue;
-        const QString& id = it.key();
-        auto entry = std::find_if(m_entries.begin(), m_entries.end(),
-            [&](const MediaEntry& e) { return e.id == id; });
-        if (entry == m_entries.end() || entry->type != "video") continue;
-
-        if (m_stageOutput) {
-            rt.player->setVideoOutput(m_stageOutput);
-            if (rt.videoWidget) {
-                rt.videoWidget->hide();
-                delete rt.videoWidget;
-                rt.videoWidget = nullptr;
-            }
-        } else {
-            if (!rt.videoWidget) {
-                rt.videoWidget = new QVideoWidget();
-                rt.videoWidget->setWindowTitle(entry->name);
-                rt.videoWidget->setAttribute(Qt::WA_DeleteOnClose, false);
-                rt.videoWidget->resize(854, 480);
-                rt.player->setVideoOutput(rt.videoWidget);
-            }
-        }
-    }
 }

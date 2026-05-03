@@ -247,16 +247,17 @@ void ShowModeScreen::setStageWindow(StageWindow* stage) {
     if (!stage) return;
 
     connect(stage, &StageWindow::activated, this, [this](int idx) {
-        m_mediaManager->setStageOutput(m_stageWindow->videoOutput());
         const auto screens = QGuiApplication::screens();
-        if (idx < screens.size())
+        if (idx < screens.size()) {
+            m_mediaManager->setStageGeometry(screens[idx]->geometry());
             m_appManager->setStageGeometry(screens[idx]->geometry());
+        }
         m_stageActivateBtn->setText("Desactivar");
         m_stageWindow->showLogo();
         saveStageConfig(idx);
     });
     connect(stage, &StageWindow::deactivated, this, [this]() {
-        m_mediaManager->setStageOutput(nullptr);
+        m_mediaManager->setStageGeometry({});
         m_appManager->setStageGeometry({});
         m_stageActivateBtn->setText("Activar");
     });
@@ -326,13 +327,15 @@ void ShowModeScreen::updateStageControls() {
     m_stageActivateBtn->setText(active ? "Desactivar" : "Activar");
     m_screenCombo->setEnabled(!active);
     if (!active) {
-        if (m_stageWindow) m_mediaManager->setStageOutput(nullptr);
+        m_mediaManager->setStageGeometry({});
+        m_appManager->setStageGeometry({});
     } else {
         const int idx = m_stageWindow->activeScreenIndex();
-        m_mediaManager->setStageOutput(m_stageWindow->videoOutput());
         const auto screens = QGuiApplication::screens();
-        if (idx < screens.size())
+        if (idx < screens.size()) {
+            m_mediaManager->setStageGeometry(screens[idx]->geometry());
             m_appManager->setStageGeometry(screens[idx]->geometry());
+        }
     }
 }
 
@@ -348,18 +351,22 @@ void ShowModeScreen::loadAndSync() {
     m_mediaConfig.loadFromFile(mediaConfigPath);
     m_mediaManager->loadMedia(m_mediaConfig.items());
 
-    if (m_stageWindow && m_stageWindow->isActive())
-        m_mediaManager->setStageOutput(m_stageWindow->videoOutput());
+    if (m_stageWindow && m_stageWindow->isActive()) {
+        const int idx = m_stageWindow->activeScreenIndex();
+        const auto screens = QGuiApplication::screens();
+        if (idx >= 0 && idx < screens.size())
+            m_mediaManager->setStageGeometry(screens[idx]->geometry());
+    }
 
     m_rundownPath = QDir(m_packageRoot).filePath("config/rundown.json");
     RundownConfig full;
     full.loadFromFile(m_rundownPath);
 
-    // Show mode only uses enabled items
+    // Show mode uses all items
     m_rundownConfig.setItems({});
     QList<RundownItem> enabled;
     for (const auto& item : full.items())
-        if (item.enabled) enabled.append(item);
+        enabled.append(item);
     m_rundownConfig.setItems(enabled);
 
     m_currentRow = -1;
@@ -523,10 +530,6 @@ void ShowModeScreen::activateScene(int row) {
         m_appManager->start(item.ref);
     } else {
         if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
-        if (m_stageWindow && m_stageWindow->isActive()) {
-            if (const auto* e = mediaEntryForId(item.ref); e && e->type == "video")
-                m_stageWindow->showVideo();
-        }
         m_mediaManager->play(item.ref);
     }
 
@@ -566,9 +569,7 @@ void ShowModeScreen::onMediaStateChanged(const QString& id, MediaState state) {
         updateRow(row);
         if (m_stageWindow && m_stageWindow->isActive()) {
             if (const auto* e = mediaEntryForId(id); e && e->type == "video") {
-                if (state == MediaState::Playing)
-                    m_stageWindow->showVideo();
-                else if (state == MediaState::Stopped || state == MediaState::Error)
+                if (state == MediaState::Stopped || state == MediaState::Error)
                     m_stageWindow->showLogo();
             }
         }

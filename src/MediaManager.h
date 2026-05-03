@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QMap>
+#include <QRect>
 #include "MediaConfig.h"
 
 class QMediaPlayer;
@@ -16,7 +17,7 @@ public:
     ~MediaManager() override;
 
     void loadMedia(const QList<MediaEntry>& items);
-    void setStageOutput(QVideoWidget* widget);
+    void setStageGeometry(const QRect& geo);
 
     MediaState state(const QString& id) const;
     void play(const QString& id);
@@ -36,10 +37,10 @@ private:
         MediaState    state       = MediaState::Stopped;
         QMediaPlayer* player      = nullptr;
         QAudioOutput* audioOutput = nullptr;
-        QVideoWidget* videoWidget = nullptr; // non-null only for video entries
+        QVideoWidget* videoWidget = nullptr;
     };
 
-    QVideoWidget*               m_stageOutput = nullptr;
+    QRect                       m_stageGeometry;
     QList<MediaEntry>           m_entries;
     QMap<QString, MediaRuntime> m_runtimes;
 };

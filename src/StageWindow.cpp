@@ -1,8 +1,8 @@
 #include "StageWindow.h"
 #include <QGuiApplication>
 #include <QScreen>
+#include <QWindow>
 #include <QStackedWidget>
-#include <QVideoWidget>
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QKeyEvent>
@@ -45,19 +45,23 @@ StageWindow::StageWindow(QWidget* parent)
     logoLay->addWidget(subLabel);
     m_stack->addWidget(logoPanel);
 
-    // Index 2: Video output
-    m_videoWidget = new QVideoWidget(m_stack);
-    m_videoWidget->setAttribute(Qt::WA_NativeWindow, true);
-    m_videoWidget->setStyleSheet("background: black;");
-    m_stack->addWidget(m_videoWidget);
-
     m_stack->setCurrentIndex(0);
+}
+
+// Force the native window onto the given screen before showing.
+// On Windows, showFullScreen() on a never-shown window always lands on the
+// primary monitor regardless of setGeometry(), unless the screen is set first.
+static void pinToScreen(QWidget* w, QScreen* screen) {
+    w->create();
+    if (auto* wh = w->windowHandle())
+        wh->setScreen(screen);
 }
 
 void StageWindow::activateOnScreen(int screenIndex) {
     const auto screens = QGuiApplication::screens();
     if (screenIndex < 0 || screenIndex >= screens.size()) return;
     QScreen* screen = screens[screenIndex];
+    pinToScreen(this, screen);
     setGeometry(screen->geometry());
     showFullScreen();
     raise();
@@ -85,13 +89,6 @@ void StageWindow::showLogo() {
     emit contentChanged(m_content);
 }
 
-void StageWindow::showVideo() {
-    m_stack->setCurrentIndex(2);
-    m_content = Content::Video;
-    raise();
-    emit contentChanged(m_content);
-}
-
 void StageWindow::softHide() {
     hide();
 }
@@ -100,7 +97,9 @@ void StageWindow::softShow() {
     if (m_screenIndex < 0) return;
     const auto screens = QGuiApplication::screens();
     if (m_screenIndex >= screens.size()) return;
-    setGeometry(screens[m_screenIndex]->geometry());
+    QScreen* screen = screens[m_screenIndex];
+    pinToScreen(this, screen);
+    setGeometry(screen->geometry());
     showFullScreen();
     raise();
 }
