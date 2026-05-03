@@ -62,11 +62,9 @@ private:
     AppManager*    m_appManager   = nullptr;
     MediaManager*  m_mediaManager = nullptr;
 
-    StageWindow*   m_stageWindow       = nullptr;
-    QComboBox*     m_screenCombo       = nullptr;
-    QPushButton*   m_stageActivateBtn  = nullptr;
-    QPushButton*   m_stageBlackBtn     = nullptr;
-    QPushButton*   m_stageLogoBtn      = nullptr;
+    StageWindow*   m_stageWindow      = nullptr;
+    QComboBox*     m_screenCombo      = nullptr;
+    QPushButton*   m_stageActivateBtn = nullptr;
     QTableWidget*  m_table        = nullptr;
     QPushButton*   m_prevBtn      = nullptr;
     QPushButton*   m_nextBtn      = nullptr;

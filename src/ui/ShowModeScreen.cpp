@@ -140,22 +140,6 @@ void ShowModeScreen::buildUI() {
     connect(m_stageActivateBtn, &QPushButton::clicked, this, &ShowModeScreen::onActivateStage);
     stageBar->addWidget(m_stageActivateBtn);
 
-    stageBar->addSpacing(12);
-
-    m_stageBlackBtn = new QPushButton("Pantalla negra", this);
-    m_stageBlackBtn->setFocusPolicy(Qt::NoFocus);
-    m_stageBlackBtn->setEnabled(false);
-    connect(m_stageBlackBtn, &QPushButton::clicked, this,
-            [this]() { if (m_stageWindow) m_stageWindow->showBlack(); });
-    stageBar->addWidget(m_stageBlackBtn);
-
-    m_stageLogoBtn = new QPushButton("Logo", this);
-    m_stageLogoBtn->setFocusPolicy(Qt::NoFocus);
-    m_stageLogoBtn->setEnabled(false);
-    connect(m_stageLogoBtn, &QPushButton::clicked, this,
-            [this]() { if (m_stageWindow) m_stageWindow->showLogo(); });
-    stageBar->addWidget(m_stageLogoBtn);
-
     stageBar->addStretch();
     root->addLayout(stageBar);
 
@@ -229,7 +213,7 @@ void ShowModeScreen::buildUI() {
         m_currentRow = -1;
         updateNavButtons();
         if (m_stageWindow && m_stageWindow->isActive())
-            m_stageWindow->showBlack();
+            m_stageWindow->showLogo();
         Logger::instance().log("Show: parado todo.");
     });
     navBar->addWidget(m_stopAllBtn);
@@ -268,16 +252,13 @@ void ShowModeScreen::setStageWindow(StageWindow* stage) {
         if (idx < screens.size())
             m_appManager->setStageGeometry(screens[idx]->geometry());
         m_stageActivateBtn->setText("Desactivar");
-        m_stageBlackBtn->setEnabled(true);
-        m_stageLogoBtn->setEnabled(true);
+        m_stageWindow->showLogo();
         saveStageConfig(idx);
     });
     connect(stage, &StageWindow::deactivated, this, [this]() {
         m_mediaManager->setStageOutput(nullptr);
         m_appManager->setStageGeometry({});
         m_stageActivateBtn->setText("Activar");
-        m_stageBlackBtn->setEnabled(false);
-        m_stageLogoBtn->setEnabled(false);
     });
 }
 
@@ -303,8 +284,6 @@ void ShowModeScreen::populateScreenCombo() {
     const bool multi = screens.size() > 1;
     m_screenCombo->setVisible(multi);
     m_stageActivateBtn->setVisible(multi);
-    m_stageBlackBtn->setVisible(multi);
-    m_stageLogoBtn->setVisible(multi);
 }
 
 void ShowModeScreen::onActivateStage() {
@@ -345,8 +324,6 @@ void ShowModeScreen::updateStageControls() {
         return;
     const bool active = m_stageWindow && m_stageWindow->isActive();
     m_stageActivateBtn->setText(active ? "Desactivar" : "Activar");
-    m_stageBlackBtn->setEnabled(active);
-    m_stageLogoBtn->setEnabled(active);
     m_screenCombo->setEnabled(!active);
     if (!active) {
         if (m_stageWindow) m_mediaManager->setStageOutput(nullptr);
@@ -576,8 +553,10 @@ void ShowModeScreen::onStateChanged(const QString& id, AppState state) {
     if (m_stageWindow && m_stageWindow->isActive()) {
         if (state == AppState::Running)
             m_stageWindow->softHide();
-        else if (state == AppState::Stopped || state == AppState::Error)
+        else if (state == AppState::Stopped || state == AppState::Error) {
             m_stageWindow->softShow();
+            m_stageWindow->showLogo();
+        }
     }
 }
 
@@ -590,7 +569,7 @@ void ShowModeScreen::onMediaStateChanged(const QString& id, MediaState state) {
                 if (state == MediaState::Playing)
                     m_stageWindow->showVideo();
                 else if (state == MediaState::Stopped || state == MediaState::Error)
-                    m_stageWindow->showBlack();
+                    m_stageWindow->showLogo();
             }
         }
     }

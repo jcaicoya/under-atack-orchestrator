@@ -185,22 +185,6 @@ void ConfigureModeScreen::buildUI() {
             this, &ConfigureModeScreen::onActivateStage);
     stageRow->addWidget(m_stageActivateBtn);
 
-    stageRow->addSpacing(12);
-
-    m_stageBlackBtn = new QPushButton("Pantalla negra", this);
-    m_stageBlackBtn->setFocusPolicy(Qt::NoFocus);
-    m_stageBlackBtn->setEnabled(false);
-    connect(m_stageBlackBtn, &QPushButton::clicked, this,
-            [this]() { if (m_stageWindow) m_stageWindow->showBlack(); });
-    stageRow->addWidget(m_stageBlackBtn);
-
-    m_stageLogoBtn = new QPushButton("Logo", this);
-    m_stageLogoBtn->setFocusPolicy(Qt::NoFocus);
-    m_stageLogoBtn->setEnabled(false);
-    connect(m_stageLogoBtn, &QPushButton::clicked, this,
-            [this]() { if (m_stageWindow) m_stageWindow->showLogo(); });
-    stageRow->addWidget(m_stageLogoBtn);
-
     stageRow->addStretch();
     root->addLayout(stageRow);
 
@@ -677,8 +661,6 @@ void ConfigureModeScreen::populateScreenCombo() {
     const bool multi = screens.size() > 1;
     m_screenCombo->setVisible(multi);
     m_stageActivateBtn->setVisible(multi);
-    m_stageBlackBtn->setVisible(multi);
-    m_stageLogoBtn->setVisible(multi);
 }
 
 void ConfigureModeScreen::onActivateStage() {
@@ -697,9 +679,8 @@ void ConfigureModeScreen::updateStageStatus() {
         return;
     const bool active = m_stageWindow && m_stageWindow->isActive();
     m_stageActivateBtn->setText(active ? "Desactivar" : "Activar");
-    m_stageBlackBtn->setEnabled(active);
-    m_stageLogoBtn->setEnabled(active);
     m_screenCombo->setEnabled(!active);
+    if (active) m_stageWindow->showLogo();
 }
 
 void ConfigureModeScreen::loadStageConfig() {
