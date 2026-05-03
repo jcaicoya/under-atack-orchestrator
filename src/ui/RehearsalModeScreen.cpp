@@ -157,20 +157,6 @@ void RehearsalModeScreen::buildUI() {
     m_table->setStyleSheet(TABLE_STYLE);
     root->addWidget(m_table, 1);
 
-    // Bottom bar
-    auto* bar = new QHBoxLayout();
-    bar->addStretch();
-    m_stopAllBtn = new QPushButton("Parar todo", this);
-    m_stopAllBtn->setObjectName("DangerButton");
-    m_stopAllBtn->setMinimumWidth(110);
-    m_stopAllBtn->setFocusPolicy(Qt::NoFocus);
-    connect(m_stopAllBtn, &QPushButton::clicked, this, [this]() {
-        m_appManager->stopAll();
-        m_mediaManager->stopAll();
-    });
-    bar->addWidget(m_stopAllBtn);
-    root->addLayout(bar);
-
     // Log
     auto* logLabel = new QLabel("Log:", this);
     logLabel->setObjectName("FieldLabel");

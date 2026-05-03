@@ -66,11 +66,10 @@ private:
     QComboBox*     m_screenCombo      = nullptr;
     QPushButton*   m_stageActivateBtn = nullptr;
     QTableWidget*  m_table        = nullptr;
-    QPushButton*   m_prevBtn      = nullptr;
-    QPushButton*   m_nextBtn      = nullptr;
-    QPushButton*   m_activateBtn  = nullptr;
-    QPushButton*   m_stopAllBtn   = nullptr;
-    QLabel*        m_sceneLabel   = nullptr;
+    QPushButton*   m_prevBtn     = nullptr;
+    QPushButton*   m_nextBtn     = nullptr;
+    QPushButton*   m_activateBtn = nullptr;
+    QLabel*        m_sceneLabel  = nullptr;
     QTextEdit*     m_logPanel     = nullptr;
 
     int            m_currentRow   = -1;   // -1 = none active

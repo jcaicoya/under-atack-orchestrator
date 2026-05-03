@@ -201,22 +201,6 @@ void ShowModeScreen::buildUI() {
     m_sceneLabel->setObjectName("MutedLabel");
     navBar->addWidget(m_sceneLabel);
 
-    navBar->addSpacing(24);
-
-    m_stopAllBtn = new QPushButton("Parar todo", this);
-    m_stopAllBtn->setObjectName("DangerButton");
-    m_stopAllBtn->setMinimumWidth(110);
-    m_stopAllBtn->setFocusPolicy(Qt::NoFocus);
-    connect(m_stopAllBtn, &QPushButton::clicked, this, [this]() {
-        m_appManager->stopAll();
-        m_mediaManager->stopAll();
-        m_currentRow = -1;
-        updateNavButtons();
-        if (m_stageWindow && m_stageWindow->isActive())
-            m_stageWindow->showLogo();
-        Logger::instance().log("Show: parado todo.");
-    });
-    navBar->addWidget(m_stopAllBtn);
     root->addLayout(navBar);
 
     // Log

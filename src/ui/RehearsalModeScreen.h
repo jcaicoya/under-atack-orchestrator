@@ -62,7 +62,6 @@ private:
     StageWindow*   m_stageWindow      = nullptr;
     QComboBox*     m_screenCombo      = nullptr;
     QPushButton*   m_stageActivateBtn = nullptr;
-    QTableWidget*  m_table        = nullptr;
-    QPushButton*   m_stopAllBtn   = nullptr;
-    QTextEdit*     m_logPanel     = nullptr;
+    QTableWidget*  m_table    = nullptr;
+    QTextEdit*     m_logPanel = nullptr;
 };
