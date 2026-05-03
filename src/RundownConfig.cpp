@@ -22,7 +22,6 @@ bool RundownConfig::loadFromFile(const QString& path) {
         RundownItem item;
         item.type    = obj["type"].toString();
         item.ref     = obj["ref"].toString();
-        item.enabled = obj["enabled"].toBool(false);
         if (!item.type.isEmpty() && !item.ref.isEmpty())
             m_items.append(item);
     }
@@ -35,7 +34,6 @@ bool RundownConfig::saveToFile(const QString& path) const {
         QJsonObject obj;
         obj["type"]    = item.type;
         obj["ref"]     = item.ref;
-        obj["enabled"] = item.enabled;
         arr.append(obj);
     }
 
@@ -60,14 +58,14 @@ void RundownConfig::syncWithLibraries(const QStringList& appIds, const QStringLi
         bool found = std::any_of(m_items.begin(), m_items.end(),
             [&](const RundownItem& i) { return i.type == "app" && i.ref == id; });
         if (!found)
-            m_items.append({"app", id, false});
+            m_items.append({"app", id});
     }
 
     for (const QString& id : mediaIds) {
         bool found = std::any_of(m_items.begin(), m_items.end(),
             [&](const RundownItem& i) { return i.type == "media" && i.ref == id; });
         if (!found)
-            m_items.append({"media", id, false});
+            m_items.append({"media", id});
     }
 }
 
@@ -79,9 +77,4 @@ void RundownConfig::moveUp(int index) {
 void RundownConfig::moveDown(int index) {
     if (index >= 0 && index < m_items.size() - 1)
         m_items.swapItemsAt(index, index + 1);
-}
-
-void RundownConfig::setEnabled(int index, bool enabled) {
-    if (index >= 0 && index < m_items.size())
-        m_items[index].enabled = enabled;
 }

@@ -7,7 +7,6 @@ struct MediaEntry {
     QString name;
     QString type;     // "video" or "audio"
     QString path;
-    bool    enabled = true;
 };
 
 class MediaConfig {

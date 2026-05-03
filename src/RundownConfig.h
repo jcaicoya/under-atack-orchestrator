@@ -6,7 +6,6 @@
 struct RundownItem {
     QString type;    // "app" or "media"
     QString ref;     // id of the referenced entry
-    bool    enabled = false;
 };
 
 class RundownConfig {
@@ -22,7 +21,6 @@ public:
 
     void moveUp(int index);
     void moveDown(int index);
-    void setEnabled(int index, bool enabled);
 
 private:
     QList<RundownItem> m_items;

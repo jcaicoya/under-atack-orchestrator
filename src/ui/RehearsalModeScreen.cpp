@@ -5,7 +5,6 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
-#include <QCheckBox>
 #include <QScrollBar>
 #include <QDir>
 #include <QFileInfo>
@@ -140,16 +139,15 @@ void RehearsalModeScreen::buildUI() {
     stageBar->addStretch();
     root->addLayout(stageBar);
 
-    // Rundown table — columns: "" | Nombre | Tipo | ✓ | Acción | Parar | Estado
-    m_table = new QTableWidget(0, 7, this);
-    m_table->setHorizontalHeaderLabels({"", "Nombre", "Tipo", "✓", "Acción", "Parar", "Estado"});
+    // Rundown table — columns: "" | Nombre | Tipo | Iniciar | Parar | Estado
+    m_table = new QTableWidget(0, 6, this);
+    m_table->setHorizontalHeaderLabels({"", "Nombre", "Tipo", "Iniciar", "Parar", "Estado"});
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed); m_table->setColumnWidth(0, 52);
     m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed); m_table->setColumnWidth(2, 68);
-    m_table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_table->setColumnWidth(3, 36);
-    m_table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Fixed); m_table->setColumnWidth(4, 100);
-    m_table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Fixed); m_table->setColumnWidth(5, 80);
-    m_table->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Fixed); m_table->setColumnWidth(6, 130);
+    m_table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_table->setColumnWidth(3, 100);
+    m_table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Fixed); m_table->setColumnWidth(4, 80);
+    m_table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Fixed); m_table->setColumnWidth(5, 130);
     m_table->setSelectionMode(QAbstractItemView::NoSelection);
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->setFocusPolicy(Qt::NoFocus);
@@ -395,14 +393,13 @@ void RehearsalModeScreen::populateTable() {
         typeItem->setForeground(typeColor);
         m_table->setItem(row, 2, typeItem);
 
-        // Col 3: Action button (Iniciar / Reproducir)
-        bool isApp = (item.type == "app");
-        auto* actionBtn = new QPushButton(isApp ? "Iniciar" : "Reproducir", this);
+        // Col 3: Iniciar
+        const QString ref  = item.ref;
+        const QString type = item.type;
+        auto* actionBtn = new QPushButton("Iniciar", this);
         actionBtn->setFocusPolicy(Qt::NoFocus);
         m_table->setCellWidget(row, 3, actionBtn);
 
-        const QString ref  = item.ref;
-        const QString type = item.type;
         connect(actionBtn, &QPushButton::clicked, this, [this, ref, type]() {
             if (type == "app")
                 m_appManager->start(ref);
@@ -410,21 +407,21 @@ void RehearsalModeScreen::populateTable() {
                 m_mediaManager->play(ref);
         });
 
-        // Col 5: Stop button
+        // Col 4: Parar
         auto* stopBtn = new QPushButton("Parar", this);
         stopBtn->setFocusPolicy(Qt::NoFocus);
         stopBtn->setEnabled(false);
-        m_table->setCellWidget(row, 5, stopBtn);
+        m_table->setCellWidget(row, 4, stopBtn);
 
         connect(stopBtn, &QPushButton::clicked, this, [this, ref, type]() {
             if (type == "app") m_appManager->stop(ref);
             else               m_mediaManager->stop(ref);
         });
 
-        // Col 6: Estado
+        // Col 5: Estado
         auto* stateItem = new QTableWidgetItem("LISTA");
         stateItem->setForeground(CyberTheme::color(CyberTheme::TextMuted));
-        m_table->setItem(row, 6, stateItem);
+        m_table->setItem(row, 5, stateItem);
 
         m_table->setRowHeight(row, 38);
         updateRow(row);

@@ -21,7 +21,6 @@
       "id": "qr",
       "name": "QR",
       "description": "QR attack",
-      "enabled": true,
       "executable": "cybershow-qr.exe",
       "workingDirectory": "C:\\Users\\caico\\Desktop\\CUARZOPOLAR\\bajo-ataque\\qr\\cmake-build-release",
       "arguments": [],

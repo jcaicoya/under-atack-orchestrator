@@ -39,7 +39,6 @@ bool AppConfig::loadFromFile(const QString& path) {
         e.id                     = o["id"].toString();
         e.name                   = o["name"].toString();
         e.description            = o["description"].toString();
-        e.enabled                = o["enabled"].toBool(true);
         e.executable             = o["executable"].toString();
         e.workingDirectory       = o["workingDirectory"].toString();
         e.arguments              = toStringList(o["arguments"].toArray());
@@ -62,7 +61,6 @@ bool AppConfig::saveToFile(const QString& path) const {
         o["id"]                     = e.id;
         o["name"]                   = e.name;
         o["description"]            = e.description;
-        o["enabled"]                = e.enabled;
         o["executable"]             = e.executable;
         o["workingDirectory"]       = e.workingDirectory;
         o["arguments"]              = toJsonArray(e.arguments);

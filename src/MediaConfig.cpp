@@ -26,7 +26,6 @@ bool MediaConfig::loadFromFile(const QString& path) {
         e.name    = o["name"].toString();
         e.type    = o["type"].toString();
         e.path    = o["path"].toString();
-        e.enabled = o["enabled"].toBool(true);
         m_items.append(e);
     }
     return true;
@@ -40,7 +39,6 @@ bool MediaConfig::saveToFile(const QString& path) const {
         o["name"]    = e.name;
         o["type"]    = e.type;
         o["path"]    = e.path;
-        o["enabled"] = e.enabled;
         arr.append(o);
     }
     QJsonObject root;

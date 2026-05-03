@@ -7,7 +7,6 @@ struct AppEntry {
     QString    id;
     QString    name;
     QString    description;
-    bool       enabled              = true;
     QString    executable;
     QString    workingDirectory;
     QStringList arguments;
