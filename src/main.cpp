@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     Logger::instance().log(QString("Package root: %1").arg(packageRoot));
 
     MainWindow window(packageRoot);
-    window.show();
+    window.showFullScreen();
 
     return app.exec();
 }

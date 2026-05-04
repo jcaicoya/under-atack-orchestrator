@@ -7,7 +7,7 @@ MainWindow::MainWindow(const QString& packageRoot, QWidget* parent)
     , m_packageRoot(packageRoot)
 {
     setWindowTitle("Cybershow Orchestrator");
-    setMinimumSize(920, 620);
+    setMinimumSize(760, 520);
 
     auto* bg = new CyberBackgroundWidget(this);
     setCentralWidget(bg);

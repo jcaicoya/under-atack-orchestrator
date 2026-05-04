@@ -94,7 +94,6 @@ ShowModeScreen::ShowModeScreen(const QString& packageRoot, QWidget* parent)
     , m_mediaManager(new MediaManager(this))
 {
     setFocusPolicy(Qt::StrongFocus);
-    m_appManager->setMode(ShowMode::Show);
 
     connect(m_appManager,   &AppManager::stateChanged,   this, &ShowModeScreen::onStateChanged);
     connect(m_appManager,   &AppManager::logMessage,     &Logger::instance(), &Logger::log);
@@ -103,6 +102,17 @@ ShowModeScreen::ShowModeScreen(const QString& packageRoot, QWidget* parent)
     connect(&Logger::instance(), &Logger::messageLogged, this, &ShowModeScreen::onLogMessage);
 
     buildUI();
+
+    connect(qGuiApp, &QGuiApplication::screenAdded, this, [this](QScreen*) {
+        populateScreenCombo();
+        loadStageConfig();
+        updateStageControls();
+    });
+    connect(qGuiApp, &QGuiApplication::screenRemoved, this, [this](QScreen*) {
+        populateScreenCombo();
+        loadStageConfig();
+        updateStageControls();
+    });
 }
 
 // ---------- UI ---------------------------------------------------------------
@@ -144,12 +154,12 @@ void ShowModeScreen::buildUI() {
     root->addLayout(stageBar);
 
     // ── Scene table ───────────────────────────────────────────────────────────
-    // Columns: Nº | Nombre | Tipo | Estado
+    // Columns: Nº | Tipo | Escena | Estado
     m_table = new QTableWidget(0, 4, this);
-    m_table->setHorizontalHeaderLabels({"Nº", "Escena", "Tipo", "Estado"});
+    m_table->setHorizontalHeaderLabels({"Nº", "Tipo", "Escena", "Estado"});
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed); m_table->setColumnWidth(0, 42);
-    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-    m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed); m_table->setColumnWidth(2, 68);
+    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed); m_table->setColumnWidth(1, 78);
+    m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
     m_table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_table->setColumnWidth(3, 130);
     m_table->setSelectionMode(QAbstractItemView::SingleSelection);
     m_table->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -203,11 +213,6 @@ void ShowModeScreen::buildUI() {
 
     root->addLayout(navBar);
 
-    // Log
-    auto* logLabel = new QLabel("Log:", this);
-    logLabel->setObjectName("FieldLabel");
-    root->addWidget(logLabel);
-
     m_logPanel = new QTextEdit(this);
     m_logPanel->setReadOnly(true);
     m_logPanel->setStyleSheet(
@@ -220,7 +225,8 @@ void ShowModeScreen::buildUI() {
         "  font-size: 11px;"
         "  padding: 8px;"
         "}");
-    m_logPanel->setFixedHeight(100);
+    m_logPanel->setFixedHeight(120);
+    m_logPanel->setVisible(false);
     root->addWidget(m_logPanel);
 }
 
@@ -377,18 +383,7 @@ void ShowModeScreen::populateTable() {
         numItem->setTextAlignment(Qt::AlignCenter);
         m_table->setItem(row, 0, numItem);
 
-        // Col 1: Nombre
-        QString name = item.ref;
-        if (item.type == "app") {
-            if (const auto* e = appEntryForId(item.ref)) name = e->name;
-        } else {
-            if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
-        }
-        auto* nameItem = new QTableWidgetItem(name);
-        nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
-        m_table->setItem(row, 1, nameItem);
-
-        // Col 2: Tipo
+        // Col 1: Tipo
         QString typeStr;
         QColor  typeColor;
         if (item.type == "app") {
@@ -402,7 +397,19 @@ void ShowModeScreen::populateTable() {
         }
         auto* typeItem = new QTableWidgetItem(typeStr);
         typeItem->setForeground(typeColor);
-        m_table->setItem(row, 2, typeItem);
+        typeItem->setTextAlignment(Qt::AlignCenter);
+        m_table->setItem(row, 1, typeItem);
+
+        // Col 2: Nombre
+        QString name = item.ref;
+        if (item.type == "app") {
+            if (const auto* e = appEntryForId(item.ref)) name = e->name;
+        } else {
+            if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
+        }
+        auto* nameItem = new QTableWidgetItem(name);
+        nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
+        m_table->setItem(row, 2, nameItem);
 
         // Col 3: Estado
         auto* stateItem = new QTableWidgetItem("LISTA");
@@ -444,7 +451,7 @@ void ShowModeScreen::updateRow(int row) {
     for (int col = 0; col < m_table->columnCount(); ++col) {
         if (auto* it = m_table->item(row, col)) {
             it->setBackground(isActive ? bg : QBrush());
-            if (col == 1) it->setForeground(accent);
+            if (col == 2) it->setForeground(accent);
         }
     }
     if (auto* numIt = m_table->item(row, 0))
@@ -460,11 +467,11 @@ void ShowModeScreen::updateNavButtons() {
     if (m_currentRow < 0) {
         m_sceneLabel->setText(count > 0 ? "Selecciona una escena" : "Sin escenas");
     } else {
-        const QString name = m_table->item(m_currentRow, 1)
-            ? m_table->item(m_currentRow, 1)->text() : QString();
+        const QString name = m_table->item(m_currentRow, 2)
+            ? m_table->item(m_currentRow, 2)->text() : QString();
         const int next = m_currentRow + 1;
-        const QString nextName = (next < count && m_table->item(next, 1))
-            ? m_table->item(next, 1)->text() : QString("—");
+        const QString nextName = (next < count && m_table->item(next, 2))
+            ? m_table->item(next, 2)->text() : QString("—");
         m_sceneLabel->setText(
             QString("Escena %1/%2: %3   →  %4").arg(m_currentRow + 1).arg(count).arg(name, nextName));
     }
@@ -567,6 +574,9 @@ void ShowModeScreen::onLogMessage(const QString& formatted) {
 
 void ShowModeScreen::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
+        case Qt::Key_F10:
+            m_logPanel->setVisible(!m_logPanel->isVisible());
+            break;
         case Qt::Key_Right:
         case Qt::Key_Space: {
             const int next = (m_currentRow < 0) ? 0 : m_currentRow + 1;

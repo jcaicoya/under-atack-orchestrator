@@ -14,13 +14,15 @@ The orchestrator is **not** a simple launcher. It is the control cabin for a liv
 - A fullscreen stage window (logo / black / video) on the projector
 - A rundown of scenes (apps + media) for rehearsal and live show
 
+The operator window opens fullscreen on the laptop display by default. The projector/stage window is still activated separately from the Escenario controls when a secondary screen is available.
+
 Three operating modes:
 
 | Mode | Purpose |
 |---|---|
-| **CONFIGURAR** | Prepare the show: add/edit apps and media, test launch/stop, activate stage screen |
-| **ENSAYO** | Rehearse: reorder the rundown, launch anything manually, play videos |
-| **SHOW** | Run the show: navigate scenes in order with Anterior / Activar / Siguiente |
+| **CONFIGURAR** | Prepare the show: add/edit apps and media, test app Demo/Live launch, activate stage screen |
+| **ENSAYO** | Rehearse: reorder the rundown, launch apps in Demo/Live, play videos |
+| **SHOW** | Run the show live: navigate scenes in order with Anterior / Activar / Siguiente |
 
 ---
 
@@ -44,6 +46,7 @@ Three operating modes:
 | `1` | Switch to CONFIGURAR |
 | `2` | Switch to ENSAYO |
 | `3` | Switch to SHOW |
+| `F10` | Show / hide log panel |
 | `←` | Switch to previous mode (ENSAYO → CONFIGURAR, SHOW → ENSAYO) |
 | `→` | Switch to next mode (CONFIGURAR → ENSAYO, ENSAYO → SHOW) |
 

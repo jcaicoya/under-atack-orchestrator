@@ -81,6 +81,31 @@ static const QString TABLE_STYLE = QStringLiteral(R"QSS(
     }
 )QSS");
 
+static QWidget* makeLaunchCell(QPushButton* demoBtn, QPushButton* liveBtn, QWidget* parent) {
+    auto* w = new QWidget(parent);
+    w->setStyleSheet("background: transparent;");
+    auto* lay = new QHBoxLayout(w);
+    lay->setContentsMargins(4, 3, 4, 3);
+    lay->setSpacing(6);
+    demoBtn->setMinimumSize(78, 32);
+    liveBtn->setMinimumSize(78, 32);
+    lay->addWidget(demoBtn);
+    lay->addWidget(liveBtn);
+    return w;
+}
+
+static void setCellButtonsEnabled(QTableWidget* table, int row, int col, bool enabled) {
+    QWidget* cell = table->cellWidget(row, col);
+    if (!cell) return;
+    if (auto* button = qobject_cast<QPushButton*>(cell)) {
+        button->setEnabled(enabled);
+        return;
+    }
+    const auto buttons = cell->findChildren<QPushButton*>();
+    for (auto* button : buttons)
+        button->setEnabled(enabled);
+}
+
 // ---------- construction -----------------------------------------------------
 
 RehearsalModeScreen::RehearsalModeScreen(const QString& packageRoot, QWidget* parent)
@@ -90,7 +115,6 @@ RehearsalModeScreen::RehearsalModeScreen(const QString& packageRoot, QWidget* pa
     , m_mediaManager(new MediaManager(this))
 {
     setFocusPolicy(Qt::StrongFocus);
-    m_appManager->setMode(ShowMode::Design);
 
     connect(m_appManager,   &AppManager::stateChanged,   this, &RehearsalModeScreen::onStateChanged);
     connect(m_appManager,   &AppManager::logMessage,     &Logger::instance(), &Logger::log);
@@ -99,6 +123,17 @@ RehearsalModeScreen::RehearsalModeScreen(const QString& packageRoot, QWidget* pa
     connect(&Logger::instance(), &Logger::messageLogged, this, &RehearsalModeScreen::onLogMessage);
 
     buildUI();
+
+    connect(qGuiApp, &QGuiApplication::screenAdded, this, [this](QScreen*) {
+        populateScreenCombo();
+        loadStageConfig();
+        updateStageControls();
+    });
+    connect(qGuiApp, &QGuiApplication::screenRemoved, this, [this](QScreen*) {
+        populateScreenCombo();
+        loadStageConfig();
+        updateStageControls();
+    });
 }
 
 // ---------- UI ---------------------------------------------------------------
@@ -139,14 +174,14 @@ void RehearsalModeScreen::buildUI() {
     stageBar->addStretch();
     root->addLayout(stageBar);
 
-    // Rundown table — columns: "" | Nombre | Tipo | Iniciar | Parar | Estado
+    // Rundown table — columns: "" | Tipo | Nombre | Iniciar | Parar | Estado
     m_table = new QTableWidget(0, 6, this);
-    m_table->setHorizontalHeaderLabels({"", "Nombre", "Tipo", "Iniciar", "Parar", "Estado"});
+    m_table->setHorizontalHeaderLabels({"", "Tipo", "Nombre", "Iniciar", "Parar", "Estado"});
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed); m_table->setColumnWidth(0, 52);
-    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-    m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed); m_table->setColumnWidth(2, 68);
-    m_table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_table->setColumnWidth(3, 100);
-    m_table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Fixed); m_table->setColumnWidth(4, 80);
+    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed); m_table->setColumnWidth(1, 78);
+    m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    m_table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_table->setColumnWidth(3, 180);
+    m_table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Fixed); m_table->setColumnWidth(4, 104);
     m_table->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Fixed); m_table->setColumnWidth(5, 130);
     m_table->setSelectionMode(QAbstractItemView::NoSelection);
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -156,11 +191,6 @@ void RehearsalModeScreen::buildUI() {
     m_table->setSortingEnabled(false);
     m_table->setStyleSheet(TABLE_STYLE);
     root->addWidget(m_table, 1);
-
-    // Log
-    auto* logLabel = new QLabel("Log:", this);
-    logLabel->setObjectName("FieldLabel");
-    root->addWidget(logLabel);
 
     m_logPanel = new QTextEdit(this);
     m_logPanel->setReadOnly(true);
@@ -175,7 +205,8 @@ void RehearsalModeScreen::buildUI() {
         "  padding: 8px;"
         "}");
     root->addWidget(m_logPanel, 0);
-    m_logPanel->setFixedHeight(120);
+    m_logPanel->setFixedHeight(140);
+    m_logPanel->setVisible(false);
 }
 
 // ---------- stage ------------------------------------------------------------
@@ -352,18 +383,7 @@ void RehearsalModeScreen::populateTable() {
             populateTable();
         });
 
-        // Col 1: Nombre
-        QString name = item.ref;
-        if (item.type == "app") {
-            if (const auto* e = appEntryForId(item.ref)) name = e->name;
-        } else {
-            if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
-        }
-        auto* nameItem = new QTableWidgetItem(name);
-        nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
-        m_table->setItem(row, 1, nameItem);
-
-        // Col 2: Tipo
+        // Col 1: Tipo
         QString typeStr;
         QColor  typeColor;
         if (item.type == "app") {
@@ -377,21 +397,45 @@ void RehearsalModeScreen::populateTable() {
         }
         auto* typeItem = new QTableWidgetItem(typeStr);
         typeItem->setForeground(typeColor);
-        m_table->setItem(row, 2, typeItem);
+        typeItem->setTextAlignment(Qt::AlignCenter);
+        m_table->setItem(row, 1, typeItem);
+
+        // Col 2: Nombre
+        QString name = item.ref;
+        if (item.type == "app") {
+            if (const auto* e = appEntryForId(item.ref)) name = e->name;
+        } else {
+            if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
+        }
+        auto* nameItem = new QTableWidgetItem(name);
+        nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
+        m_table->setItem(row, 2, nameItem);
 
         // Col 3: Iniciar
         const QString ref  = item.ref;
         const QString type = item.type;
-        auto* actionBtn = new QPushButton("Iniciar", this);
-        actionBtn->setFocusPolicy(Qt::NoFocus);
-        m_table->setCellWidget(row, 3, actionBtn);
+        if (type == "app") {
+            auto* demoBtn = new QPushButton("Demo", this);
+            auto* liveBtn = new QPushButton("Live", this);
+            demoBtn->setFocusPolicy(Qt::NoFocus);
+            liveBtn->setFocusPolicy(Qt::NoFocus);
+            m_table->setCellWidget(row, 3, makeLaunchCell(demoBtn, liveBtn, this));
 
-        connect(actionBtn, &QPushButton::clicked, this, [this, ref, type]() {
-            if (type == "app")
-                m_appManager->start(ref);
-            else
+            connect(demoBtn, &QPushButton::clicked, this, [this, ref]() {
+                m_appManager->start(ref, AppLaunchMode::Demo);
+            });
+            connect(liveBtn, &QPushButton::clicked, this, [this, ref]() {
+                m_appManager->start(ref, AppLaunchMode::Live);
+            });
+        } else {
+            auto* actionBtn = new QPushButton("Iniciar", this);
+            actionBtn->setFocusPolicy(Qt::NoFocus);
+            m_table->setCellWidget(row, 3, actionBtn);
+
+            connect(actionBtn, &QPushButton::clicked, this, [this, ref]() {
                 m_mediaManager->play(ref);
-        });
+            });
+        }
 
         // Col 4: Parar
         auto* stopBtn = new QPushButton("Parar", this);
@@ -409,7 +453,7 @@ void RehearsalModeScreen::populateTable() {
         stateItem->setForeground(CyberTheme::color(CyberTheme::TextMuted));
         m_table->setItem(row, 5, stateItem);
 
-        m_table->setRowHeight(row, 38);
+        m_table->setRowHeight(row, 44);
         updateRow(row);
     }
 }
@@ -442,7 +486,7 @@ void RehearsalModeScreen::updateRow(int row) {
         si->setText(stateLabel);
         si->setForeground(stateColor);
     }
-    if (auto* b = qobject_cast<QPushButton*>(m_table->cellWidget(row, 3))) b->setEnabled(canAction);
+    setCellButtonsEnabled(m_table, row, 3, canAction);
     if (auto* b = qobject_cast<QPushButton*>(m_table->cellWidget(row, 4))) b->setEnabled(canStop);
 }
 
@@ -501,6 +545,9 @@ void RehearsalModeScreen::onLogMessage(const QString& formatted) {
 
 void RehearsalModeScreen::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
+        case Qt::Key_F10:
+            m_logPanel->setVisible(!m_logPanel->isVisible());
+            break;
         case Qt::Key_Escape:                     emit returnToSelector(); break;
         case Qt::Key_1: case Qt::Key_Left:       emit switchMode(0); break;
         case Qt::Key_3: case Qt::Key_Right:      emit switchMode(2); break;

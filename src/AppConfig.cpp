@@ -42,9 +42,6 @@ bool AppConfig::loadFromFile(const QString& path) {
         e.executable             = o["executable"].toString();
         e.workingDirectory       = o["workingDirectory"].toString();
         e.arguments              = toStringList(o["arguments"].toArray());
-        e.configurationArguments = toStringList(o["configurationArguments"].toArray());
-        e.rehearsalArguments     = toStringList(o["rehearsalArguments"].toArray());
-        e.liveArguments          = toStringList(o["liveArguments"].toArray());
         e.startupPolicy          = o["startupPolicy"].toString("manual");
         e.closePolicy            = o["closePolicy"].toString("terminateThenKill");
         e.expectedWindowTitle    = o["expectedWindowTitle"].toString();
@@ -64,9 +61,6 @@ bool AppConfig::saveToFile(const QString& path) const {
         o["executable"]             = e.executable;
         o["workingDirectory"]       = e.workingDirectory;
         o["arguments"]              = toJsonArray(e.arguments);
-        o["configurationArguments"] = toJsonArray(e.configurationArguments);
-        o["rehearsalArguments"]     = toJsonArray(e.rehearsalArguments);
-        o["liveArguments"]          = toJsonArray(e.liveArguments);
         o["startupPolicy"]          = e.startupPolicy;
         o["closePolicy"]            = e.closePolicy;
         o["expectedWindowTitle"]    = e.expectedWindowTitle;

@@ -6,13 +6,14 @@
 #include "AppConfig.h"
 
 enum class AppState { Stopped, Starting, Running, Stopping, Error };
-enum class ShowMode  { Configure, Design, Show };
+enum class AppLaunchMode { Demo, Live };
 
 struct AppRuntime {
     QProcess* process        = nullptr;
     AppState  state          = AppState::Stopped;
     QTimer*   killTimer      = nullptr;
     bool      pendingRestart = false;
+    AppLaunchMode pendingRestartMode = AppLaunchMode::Live;
 };
 
 class AppManager : public QObject {
@@ -20,13 +21,12 @@ class AppManager : public QObject {
 public:
     explicit AppManager(const QString& packageRoot, QObject* parent = nullptr);
 
-    void setMode(ShowMode mode);
     void loadApps(const QList<AppEntry>& apps);
     void setStageScreen(int screenIndex);  // -1 = no stage
 
-    void start(const QString& id);
+    void start(const QString& id, AppLaunchMode launchMode = AppLaunchMode::Live);
     void stop(const QString& id);
-    void restart(const QString& id);
+    void restart(const QString& id, AppLaunchMode launchMode = AppLaunchMode::Live);
     void stopAll();
 
     AppState                state(const QString& id) const;
@@ -39,10 +39,9 @@ signals:
 private:
     void    setState(const QString& id, AppState newState);
     QString resolve(const QString& relativePath) const;
-    QStringList argsFor(const AppEntry& e) const;
+    QStringList argsFor(const AppEntry& e, AppLaunchMode launchMode) const;
 
     QString                   m_packageRoot;
-    ShowMode                  m_mode = ShowMode::Configure;
     QList<AppEntry>           m_entries;
     QMap<QString, AppRuntime> m_runtimes;
     int                       m_stageScreenIndex = -1;

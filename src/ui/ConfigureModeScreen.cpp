@@ -96,6 +96,31 @@ static QWidget* makeActionCell(QPushButton* editBtn, QPushButton* delBtn, QWidge
     return w;
 }
 
+static QWidget* makeLaunchCell(QPushButton* demoBtn, QPushButton* liveBtn, QWidget* parent) {
+    auto* w = new QWidget(parent);
+    w->setStyleSheet("background: transparent;");
+    auto* lay = new QHBoxLayout(w);
+    lay->setContentsMargins(4, 3, 4, 3);
+    lay->setSpacing(6);
+    demoBtn->setMinimumSize(78, 32);
+    liveBtn->setMinimumSize(78, 32);
+    lay->addWidget(demoBtn);
+    lay->addWidget(liveBtn);
+    return w;
+}
+
+static void setCellButtonsEnabled(QTableWidget* table, int row, int col, bool enabled) {
+    QWidget* cell = table->cellWidget(row, col);
+    if (!cell) return;
+    if (auto* button = qobject_cast<QPushButton*>(cell)) {
+        button->setEnabled(enabled);
+        return;
+    }
+    const auto buttons = cell->findChildren<QPushButton*>();
+    for (auto* button : buttons)
+        button->setEnabled(enabled);
+}
+
 static QLabel* makeSectionLabel(const QString& text, QWidget* parent) {
     auto* lbl = new QLabel(text, parent);
     lbl->setObjectName("FieldLabel");
@@ -146,6 +171,17 @@ ConfigureModeScreen::ConfigureModeScreen(const QString& packageRoot, QWidget* pa
     populateTable();
     loadMediaConfig();
     populateMediaTable();
+
+    connect(qGuiApp, &QGuiApplication::screenAdded, this, [this](QScreen*) {
+        populateScreenCombo();
+        loadStageConfig();
+        updateStageStatus();
+    });
+    connect(qGuiApp, &QGuiApplication::screenRemoved, this, [this](QScreen*) {
+        populateScreenCombo();
+        loadStageConfig();
+        updateStageStatus();
+    });
 }
 
 // ---------- UI ---------------------------------------------------------------
@@ -194,8 +230,8 @@ void ConfigureModeScreen::buildUI() {
     m_table = new QTableWidget(0, 5, this);
     m_table->setHorizontalHeaderLabels({"Aplicación", "Iniciar", "Parar", "Estado", ""});
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed); m_table->setColumnWidth(1, 90);
-    m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed); m_table->setColumnWidth(2, 90);
+    m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed); m_table->setColumnWidth(1, 180);
+    m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed); m_table->setColumnWidth(2, 104);
     m_table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_table->setColumnWidth(3, 120);
     m_table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Fixed); m_table->setColumnWidth(4, 68);
     m_table->setSelectionMode(QAbstractItemView::NoSelection);
@@ -219,11 +255,11 @@ void ConfigureModeScreen::buildUI() {
     root->addWidget(makeSectionLabel("Multimedia", this));
 
     m_mediaTable = new QTableWidget(0, 6, this);
-    m_mediaTable->setHorizontalHeaderLabels({"Nombre", "Tipo", "Iniciar", "Parar", "Estado", ""});
-    m_mediaTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_mediaTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed); m_mediaTable->setColumnWidth(1, 60);
-    m_mediaTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed); m_mediaTable->setColumnWidth(2, 90);
-    m_mediaTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_mediaTable->setColumnWidth(3, 90);
+    m_mediaTable->setHorizontalHeaderLabels({"Tipo", "Nombre", "Iniciar", "Parar", "Estado", ""});
+    m_mediaTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed); m_mediaTable->setColumnWidth(0, 76);
+    m_mediaTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    m_mediaTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed); m_mediaTable->setColumnWidth(2, 104);
+    m_mediaTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_mediaTable->setColumnWidth(3, 104);
     m_mediaTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Fixed); m_mediaTable->setColumnWidth(4, 120);
     m_mediaTable->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Fixed); m_mediaTable->setColumnWidth(5, 68);
     m_mediaTable->setSelectionMode(QAbstractItemView::NoSelection);
@@ -243,9 +279,6 @@ void ConfigureModeScreen::buildUI() {
     mediaBar->addStretch();
     root->addLayout(mediaBar);
 
-    // ── Log ──────────────────────────────────────────────────────────────────
-    root->addWidget(makeSectionLabel("Log:", this));
-
     m_logPanel = new QTextEdit(this);
     m_logPanel->setReadOnly(true);
     m_logPanel->setStyleSheet(
@@ -259,6 +292,8 @@ void ConfigureModeScreen::buildUI() {
         "  padding: 8px;"
         "}"
     );
+    m_logPanel->setFixedHeight(140);
+    m_logPanel->setVisible(false);
     root->addWidget(m_logPanel, 1);
 }
 
@@ -296,16 +331,23 @@ void ConfigureModeScreen::populateTable() {
         nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
         m_table->setItem(row, 0, nameItem);
 
-        auto* startBtn = new QPushButton("Iniciar", this);
+        auto* demoBtn = new QPushButton("Demo", this);
+        auto* liveBtn = new QPushButton("Live", this);
         auto* stopBtn  = new QPushButton("Parar",   this);
-        startBtn->setFocusPolicy(Qt::NoFocus);
+        demoBtn->setFocusPolicy(Qt::NoFocus);
+        liveBtn->setFocusPolicy(Qt::NoFocus);
         stopBtn->setFocusPolicy(Qt::NoFocus);
         stopBtn->setEnabled(false);
 
         const QString id = e.id;
-        connect(startBtn, &QPushButton::clicked, this, [this, id]() { m_manager->start(id); });
+        connect(demoBtn, &QPushButton::clicked, this, [this, id]() {
+            m_manager->start(id, AppLaunchMode::Demo);
+        });
+        connect(liveBtn, &QPushButton::clicked, this, [this, id]() {
+            m_manager->start(id, AppLaunchMode::Live);
+        });
         connect(stopBtn,  &QPushButton::clicked, this, [this, id]() { m_manager->stop(id); });
-        m_table->setCellWidget(row, 1, startBtn);
+        m_table->setCellWidget(row, 1, makeLaunchCell(demoBtn, liveBtn, this));
         m_table->setCellWidget(row, 2, stopBtn);
 
         auto* stateItem = new QTableWidgetItem(appStateLabel(AppState::Stopped));
@@ -318,7 +360,7 @@ void ConfigureModeScreen::populateTable() {
         connect(delBtn,  &QPushButton::clicked, this, [this, id]() { deleteApp(id); });
         m_table->setCellWidget(row, 4, makeActionCell(editBtn, delBtn, this));
 
-        m_table->setRowHeight(row, 38);
+        m_table->setRowHeight(row, 44);
     }
 }
 
@@ -346,7 +388,7 @@ void ConfigureModeScreen::updateRow(const QString& id) {
     }
     bool canStart = (s == AppState::Stopped || s == AppState::Error);
     bool canStop  = (s == AppState::Starting || s == AppState::Running || s == AppState::Stopping);
-    if (auto* b = qobject_cast<QPushButton*>(m_table->cellWidget(row, 1))) b->setEnabled(canStart);
+    setCellButtonsEnabled(m_table, row, 1, canStart);
     if (auto* b = qobject_cast<QPushButton*>(m_table->cellWidget(row, 2))) b->setEnabled(canStop);
 }
 
@@ -458,14 +500,15 @@ void ConfigureModeScreen::populateMediaTable() {
         const MediaEntry& e = entries[row];
         m_mediaTable->insertRow(row);
 
-        auto* nameItem = new QTableWidgetItem(e.name);
-        nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
-        m_mediaTable->setItem(row, 0, nameItem);
-
         bool isVideo = (e.type == "video");
         auto* typeItem = new QTableWidgetItem(isVideo ? "VIDEO" : "AUDIO");
         typeItem->setForeground(isVideo ? QColor("#00BFFF") : QColor("#FF8C00"));
-        m_mediaTable->setItem(row, 1, typeItem);
+        typeItem->setTextAlignment(Qt::AlignCenter);
+        m_mediaTable->setItem(row, 0, typeItem);
+
+        auto* nameItem = new QTableWidgetItem(e.name);
+        nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
+        m_mediaTable->setItem(row, 1, nameItem);
 
         auto* playBtn = new QPushButton("Iniciar", this);
         auto* stopBtn = new QPushButton("Parar",      this);
@@ -489,7 +532,7 @@ void ConfigureModeScreen::populateMediaTable() {
         connect(delBtn,  &QPushButton::clicked, this, [this, id]() { deleteMedia(id); });
         m_mediaTable->setCellWidget(row, 5, makeActionCell(editBtn, delBtn, this));
 
-        m_mediaTable->setRowHeight(row, 38);
+        m_mediaTable->setRowHeight(row, 44);
     }
 }
 
@@ -641,8 +684,11 @@ void ConfigureModeScreen::populateScreenCombo() {
                 .arg(i + 1).arg(screens[i]->name())
                 .arg(geo.width()).arg(geo.height()));
     }
-    if (saved >= 0 && saved < m_screenCombo->count())
-        m_screenCombo->setCurrentIndex(saved);
+    const int target = (saved >= 0 && saved < m_screenCombo->count())
+        ? saved
+        : m_screenCombo->count() - 1;
+    if (target >= 0)
+        m_screenCombo->setCurrentIndex(target);
 
     const bool multi = screens.size() > 1;
     m_screenCombo->setVisible(multi);
@@ -693,6 +739,9 @@ void ConfigureModeScreen::saveStageConfig(int screenIndex) {
 
 void ConfigureModeScreen::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
+        case Qt::Key_F10:
+            m_logPanel->setVisible(!m_logPanel->isVisible());
+            break;
         case Qt::Key_Escape: emit returnToSelector(); break;
         case Qt::Key_2: case Qt::Key_Right: emit switchMode(1); break;
         case Qt::Key_3:                     emit switchMode(2); break;
@@ -704,5 +753,6 @@ void ConfigureModeScreen::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
     setFocus();
     populateScreenCombo();
+    loadStageConfig();
     updateStageStatus();
 }

@@ -10,9 +10,6 @@ struct AppEntry {
     QString    executable;
     QString    workingDirectory;
     QStringList arguments;
-    QStringList configurationArguments;
-    QStringList rehearsalArguments;
-    QStringList liveArguments;
     QString    startupPolicy       = "manual";
     QString    closePolicy         = "terminateThenKill";
     QString    expectedWindowTitle;

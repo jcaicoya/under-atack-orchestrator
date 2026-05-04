@@ -15,6 +15,8 @@ external show applications, video playback, and a fullscreen stage window on a s
 
 The show uses several C++/Qt Windows executables, videos, and later sounds/lighting. The
 orchestrator does not merely launch apps — it activates and supervises show scenes.
+The operator window opens fullscreen by default; the stage/projector window remains a separate
+fullscreen window selected from the Escenario controls.
 
 ---
 
@@ -111,12 +113,12 @@ Manages `QProcess` lifecycle for external show executables.
 
 ```cpp
 enum class AppState { Stopped, Starting, Running, Stopping, Error };
-enum class ShowMode  { Configure, Design, Show };
+enum class AppLaunchMode { Demo, Live };
 ```
 
 - Each app is launched with its own `workingDirectory` so DLL/plugin lookup works.
-- `setMode(ShowMode)` selects which argument set (`configurationArguments` / `rehearsalArguments`
-  / `liveArguments`) is appended at launch time.
+- App launch mode is explicit per start call: `Demo` appends `--demo`, `Live` appends `--live`.
+  SHOW mode always uses live. CONFIGURAR and ENSAYO expose both Demo and Live buttons for apps.
 - `setStageGeometry(QRect)` passes the projector screen geometry; `scheduleWindowMove()` uses
   Windows API (`EnumWindows` + `SetWindowPos`) to move the app window to the projector after
   it starts.
@@ -187,9 +189,6 @@ All paths relative to the package root (the directory containing `orchestrator.e
   "executable": "apps/MyApp/MyApp.exe",
   "workingDirectory": "apps/MyApp",
   "arguments": [],
-  "configurationArguments": [],
-  "rehearsalArguments": [],
-  "liveArguments": [],
   "startupPolicy": "manual",
   "closePolicy": "terminateThenKill",
   "expectedWindowTitle": "",
@@ -285,10 +284,12 @@ Use `-Force` to skip the uncommitted-changes check.
 ## 8. What Is Built and Working
 
 - Mode selector screen with keyboard navigation and animated cyber background
+- Operator window opens fullscreen by default and the selector cards resize with the display
 - Three mode screens: CONFIGURAR, ENSAYO, SHOW — full keyboard navigation between them
-- **CONFIGURAR:** full CRUD for apps (add/edit/delete) and media (add/edit/delete), test Iniciar/Parar
-- **ENSAYO:** Iniciar/Parar per rundown item, manual table, log panel
+- **CONFIGURAR:** full CRUD for apps (add/edit/delete) and media (add/edit/delete), app Demo/Live launch, media Iniciar/Parar
+- **ENSAYO:** app Demo/Live launch, media Iniciar/Parar per rundown item, manual table, log panel
 - **SHOW:** scene-by-scene navigation (Anterior / Activar / Siguiente), current-row highlight
+- Log panels are hidden by default on operator screens and toggled with `F10`.
 - AppManager: start / stop / restart / stopAll with QProcess, 3-second kill fallback
 - MediaManager: play / stop video with standalone fullscreen widget pinned to stage screen
 - StageWindow: fullscreen on secondary screen, logo / black, softHide / softShow

@@ -10,8 +10,6 @@ void AppManager::setStageScreen(int screenIndex) {
     m_stageScreenIndex = screenIndex;
 }
 
-void AppManager::setMode(ShowMode mode) { m_mode = mode; }
-
 void AppManager::loadApps(const QList<AppEntry>& apps) {
     m_entries = apps;
     for (const auto& e : apps)
@@ -33,12 +31,11 @@ QString AppManager::resolve(const QString& relativePath) const {
     return QDir(m_packageRoot).filePath(relativePath);
 }
 
-QStringList AppManager::argsFor(const AppEntry& e) const {
+QStringList AppManager::argsFor(const AppEntry& e, AppLaunchMode launchMode) const {
     QStringList args;
-    switch (m_mode) {
-        case ShowMode::Configure: args << "--configure"; args += e.configurationArguments; break;
-        case ShowMode::Design:    args << "--design";    args += e.rehearsalArguments;     break;
-        case ShowMode::Show:      args << "--show";      args += e.liveArguments;          break;
+    switch (launchMode) {
+        case AppLaunchMode::Demo: args << "--demo"; break;
+        case AppLaunchMode::Live: args << "--live"; break;
     }
     args += e.arguments;
     if (m_stageScreenIndex >= 0) {
@@ -47,7 +44,7 @@ QStringList AppManager::argsFor(const AppEntry& e) const {
     return args;
 }
 
-void AppManager::start(const QString& id) {
+void AppManager::start(const QString& id, AppLaunchMode launchMode) {
     auto it = std::find_if(m_entries.begin(), m_entries.end(),
                            [&](const AppEntry& e) { return e.id == id; });
     if (it == m_entries.end()) return;
@@ -111,7 +108,8 @@ void AppManager::start(const QString& id) {
 
         if (rt.pendingRestart) {
             rt.pendingRestart = false;
-            QTimer::singleShot(200, this, [this, id]() { start(id); });
+            const AppLaunchMode restartMode = rt.pendingRestartMode;
+            QTimer::singleShot(200, this, [this, id, restartMode]() { start(id, restartMode); });
         }
     });
 
@@ -137,11 +135,12 @@ void AppManager::start(const QString& id) {
         setState(id, AppState::Error);
     });
 
-    QStringList args = argsFor(entry);
+    QStringList args = argsFor(entry, launchMode);
     rt.process->setArguments(args);
 
     setState(id, AppState::Starting);
-    emit logMessage(QString("Starting %1...").arg(entry.name));
+    emit logMessage(QString("Starting %1 (%2)...")
+        .arg(entry.name, launchMode == AppLaunchMode::Demo ? "demo" : "live"));
     emit logMessage(QString("  Executable: %1").arg(exePath));
     emit logMessage(QString("  Working dir: %1").arg(workDir));
     if (!args.isEmpty())
@@ -179,12 +178,13 @@ void AppManager::stop(const QString& id) {
     rt.killTimer->start(KILL_TIMEOUT_MS);
 }
 
-void AppManager::restart(const QString& id) {
+void AppManager::restart(const QString& id, AppLaunchMode launchMode) {
     auto& rt = m_runtimes[id];
     if (rt.state == AppState::Stopped || rt.state == AppState::Error) {
-        start(id);
+        start(id, launchMode);
     } else {
         rt.pendingRestart = true;
+        rt.pendingRestartMode = launchMode;
         stop(id);
     }
 }

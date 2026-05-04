@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QKeyEvent>
 #include <QShowEvent>
+#include <QSizePolicy>
 
 // ---------------------------------------------------------------------------
 // ModeCard
@@ -22,12 +23,14 @@ public:
              QWidget*       parent = nullptr)
         : QFrame(parent), m_available(available)
     {
-        setFixedSize(230, 270);
+        setMinimumSize(180, 230);
+        setMaximumSize(270, 320);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         setFocusPolicy(Qt::NoFocus);
         setCursor(available ? Qt::PointingHandCursor : Qt::ArrowCursor);
 
         auto* root = new QVBoxLayout(this);
-        root->setContentsMargins(24, 28, 24, 24);
+        root->setContentsMargins(20, 24, 20, 20);
         root->setSpacing(0);
 
         // Number badge
@@ -162,7 +165,7 @@ ModeSelectorScreen::ModeSelectorScreen(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
 
     auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(40, 0, 40, 40);
+    root->setContentsMargins(24, 0, 24, 28);
     root->setSpacing(0);
 
     root->addStretch(2);
@@ -187,7 +190,7 @@ ModeSelectorScreen::ModeSelectorScreen(QWidget* parent)
 
     // Cards row
     auto* cardsRow = new QHBoxLayout();
-    cardsRow->setSpacing(24);
+    cardsRow->setSpacing(16);
     cardsRow->setAlignment(Qt::AlignHCenter);
 
     struct CardDef { QString title; QString description; bool available; };
