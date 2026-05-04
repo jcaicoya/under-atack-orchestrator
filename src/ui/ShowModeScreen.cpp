@@ -234,15 +234,15 @@ void ShowModeScreen::setStageWindow(StageWindow* stage) {
         const auto screens = QGuiApplication::screens();
         if (idx < screens.size()) {
             m_mediaManager->setStageGeometry(screens[idx]->geometry());
-            m_appManager->setStageGeometry(screens[idx]->geometry());
         }
+        m_appManager->setStageScreen(idx);
         m_stageActivateBtn->setText("Desactivar");
         m_stageWindow->showLogo();
         saveStageConfig(idx);
     });
     connect(stage, &StageWindow::deactivated, this, [this]() {
         m_mediaManager->setStageGeometry({});
-        m_appManager->setStageGeometry({});
+        m_appManager->setStageScreen(-1);
         m_stageActivateBtn->setText("Activar");
     });
 }
@@ -312,14 +312,14 @@ void ShowModeScreen::updateStageControls() {
     m_screenCombo->setEnabled(!active);
     if (!active) {
         m_mediaManager->setStageGeometry({});
-        m_appManager->setStageGeometry({});
+        m_appManager->setStageScreen(-1);
     } else {
         const int idx = m_stageWindow->activeScreenIndex();
         const auto screens = QGuiApplication::screens();
         if (idx < screens.size()) {
             m_mediaManager->setStageGeometry(screens[idx]->geometry());
-            m_appManager->setStageGeometry(screens[idx]->geometry());
         }
+        m_appManager->setStageScreen(idx);
     }
 }
 
