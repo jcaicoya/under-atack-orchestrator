@@ -38,7 +38,26 @@
       "startupPolicy": "manual",
       "closePolicy": "terminateThenKill",
       "expectedWindowTitle": "",
-      "category": ""
+      "category": "",
+      "androidPackage": "com.cuarzopolar.companion",
+      "androidActivity": ".MainActivity",
+      "androidWsPort": 8765
+    },
+    {
+      "id": "password",
+      "name": "Password",
+      "description": "Password cracking demonstration",
+      "enabled": true,
+      "executable": "password.exe",
+      "workingDirectory": "C:\\Users\\caico\\Desktop\\CUARZOPOLAR\\bajo-ataque\\password-qt\\cmake-build-release",
+      "arguments": [],
+      "startupPolicy": "manual",
+      "closePolicy": "terminateThenKill",
+      "expectedWindowTitle": "",
+      "category": "",
+      "androidPackage": "com.cuarzopolar.password",
+      "androidActivity": ".MainActivity",
+      "androidWsPort": 8767
     },
     {
       "id": "qr",

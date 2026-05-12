@@ -4,7 +4,11 @@
 #include <algorithm>
 
 AppManager::AppManager(const QString& packageRoot, QObject* parent)
-    : QObject(parent), m_packageRoot(packageRoot) {}
+    : QObject(parent), m_packageRoot(packageRoot)
+{
+    m_adb = new AdbManager(this);
+    connect(m_adb, &AdbManager::log, this, &AppManager::logMessage);
+}
 
 void AppManager::setStageScreen(int screenIndex) {
     m_stageScreenIndex = screenIndex;
@@ -95,12 +99,16 @@ void AppManager::start(const QString& id, AppLaunchMode launchMode) {
         if (rt.state == AppState::Stopping) {
             emit logMessage(QString("%1 stopped.").arg(name));
             setState(id, AppState::Stopped);
+            if (it != m_entries.end() && !it->androidPackage.isEmpty())
+                m_adb->stopApp(it->androidPackage);
         } else if (status == QProcess::CrashExit) {
             if (rt.state != AppState::Error)
                 setState(id, AppState::Error);
         } else if (exitCode == 0) {
             emit logMessage(QString("%1 closed.").arg(name));
             setState(id, AppState::Stopped);
+            if (it != m_entries.end() && !it->androidPackage.isEmpty())
+                m_adb->stopApp(it->androidPackage);
         } else {
             emit logMessage(QString("%1 exited unexpectedly (code %2).").arg(name).arg(exitCode));
             setState(id, AppState::Error);
@@ -145,6 +153,12 @@ void AppManager::start(const QString& id, AppLaunchMode launchMode) {
     emit logMessage(QString("  Working dir: %1").arg(workDir));
     if (!args.isEmpty())
         emit logMessage(QString("  Args: %1").arg(args.join(' ')));
+
+    if (!entry.androidPackage.isEmpty()) {
+        if (entry.androidWsPort > 0)
+            m_adb->setupReverseTunnel(entry.androidWsPort);
+        m_adb->launchApp(entry.androidPackage, entry.androidActivity);
+    }
 
     rt.process->start();
 }

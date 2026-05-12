@@ -4,6 +4,7 @@
 #include <QProcess>
 #include <QTimer>
 #include "AppConfig.h"
+#include "AdbManager.h"
 
 enum class AppState { Stopped, Starting, Running, Stopping, Error };
 enum class AppLaunchMode { Demo, Live };
@@ -45,6 +46,7 @@ private:
     QList<AppEntry>           m_entries;
     QMap<QString, AppRuntime> m_runtimes;
     int                       m_stageScreenIndex = -1;
+    AdbManager*               m_adb              = nullptr;
 
     static constexpr int KILL_TIMEOUT_MS = 3000;
 };
