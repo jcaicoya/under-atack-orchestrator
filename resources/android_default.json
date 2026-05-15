@@ -4,7 +4,7 @@
     {
       "id": "permission_android",
       "name": "Permission Android",
-      "package": "com.cuarzopolar.companion",
+      "package": "com.cuarzopolar.permission",
       "activity": ".MainActivity",
       "wsPort": 8765
     },

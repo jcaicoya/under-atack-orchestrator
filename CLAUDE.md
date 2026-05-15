@@ -249,7 +249,7 @@ in `android.json`. Used for UI pairing hints; the orchestrator does not enforce 
 {
   "id": "companion",
   "name": "Companion",
-  "package": "com.cuarzopolar.companion",
+  "package": "com.cuarzopolar.permission",
   "activity": ".MainActivity",
   "wsPort": 8765
 }
