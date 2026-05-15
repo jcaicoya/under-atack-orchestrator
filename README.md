@@ -100,7 +100,7 @@ The stage window is a fullscreen borderless window on a secondary screen (projec
 **Package structure:**
 
 ```
-orchestrator.exe
+under_attack_orchestrator.exe
 config/           ← generated at runtime (apps.json, android.json, media.json, rundown.json, stage.json)
 apps/             ← external show apps, each self-contained
 media/            ← video and audio files
@@ -153,7 +153,7 @@ The orchestrator manages Android show apps via ADB.
 
 - Requires PowerShell 7+ (`pwsh`). Run from the project root.
 - Builds the Release configuration in CMake.
-- Bundles `orchestrator.exe` + all required Qt and FFmpeg DLLs + plugins.
+- Bundles `under_attack_orchestrator.exe` + all required Qt and FFmpeg DLLs + plugins.
 - Creates `dist\bajo-ataque-orchestrator-vNN.zip` (zero-padded incrementing version).
 - Appends an entry to `releases.json` and creates a git tag.
 - Use `-Force` to skip the uncommitted-changes check.
@@ -161,7 +161,7 @@ The orchestrator manages Android show apps via ADB.
 
 **Bundled DLLs:** Qt6Core, Qt6Gui, Qt6Widgets, Qt6Multimedia, Qt6MultimediaWidgets, Qt6Network, Qt6OpenGL + FFmpeg (avcodec, avformat, avutil, swresample, swscale) + `plugins/platforms/qwindows.dll` + `plugins/multimedia/` (FFmpeg backend).
 
-**Target machine:** copy the zip, extract, run `orchestrator.exe`. No installer needed.
+**Target machine:** copy the zip, extract, run `under_attack_orchestrator.exe`. No installer needed.
 
 ---
 

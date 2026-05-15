@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(orchestrator)
+project(under_attack_orchestrator)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_AUTOMOC ON)
@@ -53,18 +53,18 @@ set(HEADERS
     src/ui/ShowModeScreen.h
 )
 
-add_executable(orchestrator WIN32
+add_executable(under_attack_orchestrator WIN32
     ${SOURCES}
     ${HEADERS}
     resources.qrc
 )
 
-target_include_directories(orchestrator PRIVATE
+target_include_directories(under_attack_orchestrator PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
 )
 
-target_link_libraries(orchestrator
+target_link_libraries(under_attack_orchestrator
     Qt::Core
     Qt::Gui
     Qt::Widgets

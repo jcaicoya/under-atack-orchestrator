@@ -2,14 +2,14 @@
   "version": 1,
   "apps": [
     {
-      "id": "companion",
-      "name": "Companion",
+      "id": "permission_android",
+      "name": "Permission Android",
       "package": "com.cuarzopolar.companion",
       "activity": ".MainActivity",
       "wsPort": 8765
     },
     {
-      "id": "password-android",
+      "id": "password_android",
       "name": "Password Android",
       "package": "com.cuarzopolar.password",
       "activity": ".MainActivity",

@@ -69,6 +69,20 @@
       "date": "2026-05-10T20:31:26",
       "message": "Build orchestrator as WIN32 app",
       "zip": "bajo-ataque-orchestrator-v09.zip"
+    },
+    {
+      "version": 10,
+      "commit": "6b5dc04",
+      "date": "2026-05-15T16:32:36",
+      "message": "Update CLAUDE.md and README.md: Android/ADB architecture docs",
+      "zip": "bajo-ataque-orchestrator-v10.zip"
+    },
+    {
+      "version": 11,
+      "commit": "6b5dc04",
+      "date": "2026-05-15T16:44:44",
+      "message": "Update CLAUDE.md and README.md: Android/ADB architecture docs",
+      "zip": "bajo-ataque-orchestrator-v11.zip"
     }
   ]
 }

@@ -213,7 +213,7 @@ It is triggered:
 
 ## 4. Config Files
 
-All paths relative to the package root (the directory containing `orchestrator.exe`).
+All paths relative to the package root (the directory containing `under_attack_orchestrator.exe`).
 
 | File | Purpose |
 |---|---|
@@ -258,7 +258,7 @@ in `android.json`. Used for UI pairing hints; the orchestrator does not enforce 
 `wsPort` > 0 triggers `adb reverse tcp:<wsPort> tcp:<wsPort>` before launch. Set to 0 to skip
 the tunnel (e.g. for apps that use their own connection mechanism).
 
-Default entries: `companion` (port 8765) and `password-android` (port 8767).
+Default entries: `permission_android` (port 8765) and `password_android` (port 8767).
 
 ### MediaEntry fields
 

@@ -9,6 +9,7 @@ $buildDir     = Join-Path $root "cmake-build-release"
 $distDir      = Join-Path $root "dist"
 $releasesFile = Join-Path $root "releases.json"
 $staging      = Join-Path $root "_staging"
+$appName      = "under_attack_orchestrator"
 
 # --- Git info ---
 $commitShort = git -C $root rev-parse --short HEAD
@@ -72,12 +73,12 @@ if ($LASTEXITCODE -ne 0) { Write-Error "Build failed."; exit 1 }
 # --- Locate build output ---
 # Ninja (CLion default): exe sits directly in $buildDir
 # VS generator: exe sits in $buildDir\Release\
-if (Test-Path "$buildDir\orchestrator.exe") {
+if (Test-Path "$buildDir\under_attack_orchestrator.exe") {
     $out = $buildDir
-} elseif (Test-Path "$buildDir\Release\orchestrator.exe") {
+} elseif (Test-Path "$buildDir\Release\under_attack_orchestrator.exe") {
     $out = "$buildDir\Release"
 } else {
-    Write-Error "orchestrator.exe not found after build. Expected in $buildDir or $buildDir\Release."
+    Write-Error "under_attack_orchestrator.exe not found after build. Expected in $buildDir or $buildDir\Release."
     exit 1
 }
 
@@ -89,7 +90,7 @@ foreach ($folder in @("config", "apps", "media", "sounds", "lights", "logs", "to
     New-Item -ItemType Directory "$staging\$folder" | Out-Null
 }
 
-Copy-Item "$out\orchestrator.exe" $staging
+Copy-Item "$out\under_attack_orchestrator.exe" $staging
 
 # Qt DLLs (all that were deployed by CMakeLists.txt post-build)
 foreach ($dll in (Get-ChildItem "$out\Qt6*.dll")) {
@@ -110,6 +111,25 @@ if (Test-Path "$out\plugins\multimedia") {
     Copy-Item "$out\plugins\multimedia\*" "$staging\plugins\multimedia\" -Recurse
 }
 
+$entryDate = Get-Date -Format "yyyy-MM-ddTHH:mm:ss"
+$metadata = [PSCustomObject]@{
+    app     = $appName
+    version = $versionNum
+    commit  = $commitShort
+    date    = $entryDate
+    message = $commitMsg
+    zip     = $zipName
+}
+$metadata | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $staging "version.json") -Encoding UTF8
+@(
+    "app=$($metadata.app)"
+    "version=$($metadata.version)"
+    "commit=$($metadata.commit)"
+    "date=$($metadata.date)"
+    "message=$($metadata.message)"
+    "zip=$($metadata.zip)"
+) | Set-Content (Join-Path $staging "BUILD_INFO.txt") -Encoding UTF8
+
 # --- Zip ---
 Write-Host ">> Creating zip..."
 if (-not (Test-Path $distDir)) { New-Item -ItemType Directory $distDir | Out-Null }
@@ -121,7 +141,7 @@ Remove-Item $staging -Recurse -Force
 $entry = [PSCustomObject]@{
     version = $versionNum
     commit  = $commitShort
-    date    = (Get-Date -Format "yyyy-MM-ddTHH:mm:ss")
+    date    = $entryDate
     message = $commitMsg
     zip     = $zipName
 }
