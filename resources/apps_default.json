@@ -80,6 +80,19 @@
       "closePolicy": "terminateThenKill",
       "expectedWindowTitle": "",
       "category": ""
+    },
+    {
+      "id": "cuarzito_race",
+      "name": "Cuarzito Race",
+      "description": "Pre-show arcade game",
+      "enabled": true,
+      "executable": "under_attack_cuarzito_race.exe",
+      "workingDirectory": "C:\\Users\\caico\\Desktop\\CUARZOPOLAR\\bajo-ataque\\cuarzito_race\\cmake-build-release",
+      "arguments": [],
+      "startupPolicy": "manual",
+      "closePolicy": "terminateThenKill",
+      "expectedWindowTitle": "",
+      "category": "game"
     }
   ]
 }
