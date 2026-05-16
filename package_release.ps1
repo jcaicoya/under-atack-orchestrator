@@ -145,7 +145,7 @@ $tempZipPath = Join-Path $tempZipDir $zipName
 if (-not (Test-Path $tempZipDir)) { New-Item -ItemType Directory -Path $tempZipDir | Out-Null }
 if (Test-Path $tempZipPath) { Remove-Item $tempZipPath -Force }
 Compress-Archive -Path "$staging\*" -DestinationPath $tempZipPath
-Copy-Item -LiteralPath $tempZipPath -DestinationPath $zipPath -Force
+Copy-Item -LiteralPath $tempZipPath -Destination $zipPath -Force
 Expand-Archive -LiteralPath $tempZipPath -DestinationPath $packageDir -Force
 Remove-Item $tempZipPath -Force
 Remove-Item $staging -Recurse -Force
