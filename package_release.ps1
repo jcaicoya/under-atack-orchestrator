@@ -136,11 +136,7 @@ $metadata | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $staging "version.j
 # --- Zip ---
 Write-Host ">> Creating zip..."
 if (-not (Test-Path $distRoot)) { New-Item -ItemType Directory -Path $distRoot | Out-Null }
-if (Test-Path $packageDir) {
-    Get-ChildItem -LiteralPath $packageDir -Force |
-        Where-Object { $_.Name -notin @("config", "logs") } |
-        Remove-Item -Recurse -Force
-} else {
+if (-not (Test-Path $packageDir)) {
     New-Item -ItemType Directory -Path $packageDir | Out-Null
 }
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
