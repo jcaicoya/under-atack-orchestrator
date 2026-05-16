@@ -111,6 +111,13 @@
       "date": "2026-05-16T14:14:13",
       "message": "Polish rehearsal layout and single-screen video playback",
       "zip": "bajo-ataque-orchestrator-v15.zip"
+    },
+    {
+      "version": 16,
+      "commit": "cddbbb8",
+      "date": "2026-05-16T17:36:38",
+      "message": "Store Qt release archives at dist root",
+      "zip": "orchestrator_v16.zip"
     }
   ]
 }
