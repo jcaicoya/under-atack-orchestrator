@@ -140,8 +140,14 @@ if (-not (Test-Path $packageDir)) {
     New-Item -ItemType Directory -Path $packageDir | Out-Null
 }
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-Compress-Archive -Path "$staging\*" -DestinationPath $zipPath
-Expand-Archive -LiteralPath $zipPath -DestinationPath $packageDir -Force
+$tempZipDir = Join-Path $root "_zip_tmp"
+$tempZipPath = Join-Path $tempZipDir $zipName
+if (-not (Test-Path $tempZipDir)) { New-Item -ItemType Directory -Path $tempZipDir | Out-Null }
+if (Test-Path $tempZipPath) { Remove-Item $tempZipPath -Force }
+Compress-Archive -Path "$staging\*" -DestinationPath $tempZipPath
+Copy-Item -LiteralPath $tempZipPath -DestinationPath $zipPath -Force
+Expand-Archive -LiteralPath $tempZipPath -DestinationPath $packageDir -Force
+Remove-Item $tempZipPath -Force
 Remove-Item $staging -Recurse -Force
 
 # --- Update releases.json ---
