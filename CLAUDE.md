@@ -37,8 +37,9 @@ orchestrator/
 ├── apps/                        # External show apps, each self-contained
 ├── media/                       # Video/audio files
 ├── resources/                   # Qt resources (icons, default config templates)
-│   ├── apps_default.json
-│   └── android_default.json
+│   ├── qt_apps.json
+│   ├── android_apps.json
+│   └── media_files.json
 └── src/
     ├── main.cpp
     ├── MainWindow.h / .cpp

@@ -1,4 +1,5 @@
 #include "ShowModeScreen.h"
+#include "DefaultConfigUtils.h"
 #include "Logger.h"
 #include "CyberTheme.h"
 #include <QVBoxLayout>
@@ -36,6 +37,22 @@ static QColor appStateColor(AppState s) {
         case AppState::Running:  return CyberTheme::color(CyberTheme::AccentGreen);
         case AppState::Stopping: return CyberTheme::color(CyberTheme::Warning);
         case AppState::Error:    return CyberTheme::color(CyberTheme::Error);
+    }
+    return {};
+}
+
+static QString androidStateLabel(AndroidState s) {
+    switch (s) {
+        case AndroidState::Stopped: return "PARADA";
+        case AndroidState::Running: return "EN MARCHA";
+    }
+    return {};
+}
+
+static QColor androidStateColor(AndroidState s) {
+    switch (s) {
+        case AndroidState::Stopped: return CyberTheme::color(CyberTheme::TextMuted);
+        case AndroidState::Running: return CyberTheme::color(CyberTheme::AccentGreen);
     }
     return {};
 }
@@ -91,12 +108,17 @@ ShowModeScreen::ShowModeScreen(const QString& packageRoot, QWidget* parent)
     : QWidget(parent)
     , m_packageRoot(packageRoot)
     , m_appManager(new AppManager(packageRoot, this))
-    , m_mediaManager(new MediaManager(this))
+    , m_adb(new AdbManager(this))
+    , m_androidManager(new AndroidManager(m_adb, this))
+    , m_mediaManager(new MediaManager(packageRoot, this))
 {
     setFocusPolicy(Qt::StrongFocus);
 
     connect(m_appManager,   &AppManager::stateChanged,   this, &ShowModeScreen::onStateChanged);
     connect(m_appManager,   &AppManager::logMessage,     &Logger::instance(), &Logger::log);
+    connect(m_androidManager, &AndroidManager::stateChanged, this, &ShowModeScreen::onAndroidStateChanged);
+    connect(m_androidManager, &AndroidManager::logMessage, &Logger::instance(), &Logger::log);
+    connect(m_adb, &AdbManager::log, &Logger::instance(), &Logger::log);
     connect(m_mediaManager, &MediaManager::stateChanged, this, &ShowModeScreen::onMediaStateChanged);
     connect(m_mediaManager, &MediaManager::logMessage,   &Logger::instance(), &Logger::log);
     connect(&Logger::instance(), &Logger::messageLogged, this, &ShowModeScreen::onLogMessage);
@@ -289,6 +311,8 @@ void ShowModeScreen::onActivateStage() {
 
 void ShowModeScreen::loadStageConfig() {
     const QString path = QDir(m_packageRoot).filePath("config/stage.json");
+    if (!QFileInfo::exists(path))
+        DefaultConfigUtils::copyResourceDefaultTo(":/defaults/resources/stage.json", path);
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly)) return;
     const auto obj = QJsonDocument::fromJson(f.readAll()).object();
@@ -337,6 +361,11 @@ void ShowModeScreen::loadAndSync() {
         m_appConfig.loadFromFile(appConfigPath);
     m_appManager->loadApps(m_appConfig.apps());
 
+    const QString androidConfigPath = QDir(m_packageRoot).filePath("config/android.json");
+    if (QFileInfo::exists(androidConfigPath))
+        m_androidConfig.loadFromFile(androidConfigPath);
+    m_androidManager->loadApps(m_androidConfig.apps());
+
     const QString mediaConfigPath = QDir(m_packageRoot).filePath("config/media.json");
     m_mediaConfig.loadFromFile(mediaConfigPath);
     m_mediaManager->loadMedia(m_mediaConfig.items());
@@ -349,6 +378,8 @@ void ShowModeScreen::loadAndSync() {
     }
 
     m_rundownPath = QDir(m_packageRoot).filePath("config/rundown.json");
+    if (!QFileInfo::exists(m_rundownPath))
+        RundownConfig::copyDefaultTo(m_rundownPath);
     RundownConfig full;
     full.loadFromFile(m_rundownPath);
 
@@ -389,6 +420,9 @@ void ShowModeScreen::populateTable() {
         if (item.type == "app") {
             typeStr   = "APP";
             typeColor = QColor("#A0C8FF");
+        } else if (item.type == "android") {
+            typeStr   = "ANDROID";
+            typeColor = QColor("#80E0A0");
         } else {
             bool isVideo = false;
             if (const auto* e = mediaEntryForId(item.ref)) isVideo = (e->type == "video");
@@ -404,6 +438,8 @@ void ShowModeScreen::populateTable() {
         QString name = item.ref;
         if (item.type == "app") {
             if (const auto* e = appEntryForId(item.ref)) name = e->name;
+        } else if (item.type == "android") {
+            if (const auto* e = androidEntryForId(item.ref)) name = e->name;
         } else {
             if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
         }
@@ -433,6 +469,10 @@ void ShowModeScreen::updateRow(int row) {
         AppState s = m_appManager->state(item.ref);
         stateLabel = appStateLabel(s);
         stateColor = appStateColor(s);
+    } else if (item.type == "android") {
+        AndroidState s = m_androidManager->state(item.ref);
+        stateLabel = androidStateLabel(s);
+        stateColor = androidStateColor(s);
     } else {
         MediaState s = m_mediaManager->state(item.ref);
         stateLabel = mediaStateLabel(s);
@@ -490,6 +530,12 @@ const AppEntry* ShowModeScreen::appEntryForId(const QString& id) const {
     return nullptr;
 }
 
+const AndroidEntry* ShowModeScreen::androidEntryForId(const QString& id) const {
+    for (const auto& e : m_androidConfig.apps())
+        if (e.id == id) return &e;
+    return nullptr;
+}
+
 const MediaEntry* ShowModeScreen::mediaEntryForId(const QString& id) const {
     for (const auto& e : m_mediaConfig.items())
         if (e.id == id) return &e;
@@ -519,6 +565,9 @@ void ShowModeScreen::activateScene(int row) {
     if (item.type == "app") {
         if (const auto* e = appEntryForId(item.ref)) name = e->name;
         m_appManager->start(item.ref);
+    } else if (item.type == "android") {
+        if (const auto* e = androidEntryForId(item.ref)) name = e->name;
+        m_androidManager->start(item.ref);
     } else {
         if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
         m_mediaManager->play(item.ref);
@@ -535,8 +584,9 @@ void ShowModeScreen::stopCurrentScene() {
     const auto& items = m_rundownConfig.items();
     if (m_currentRow >= items.size()) return;
     const RundownItem& item = items[m_currentRow];
-    if (item.type == "app")   m_appManager->stop(item.ref);
-    else                      m_mediaManager->stop(item.ref);
+    if (item.type == "app")          m_appManager->stop(item.ref);
+    else if (item.type == "android") m_androidManager->stop(item.ref);
+    else                             m_mediaManager->stop(item.ref);
 }
 
 // ---------- slots ------------------------------------------------------------
@@ -565,6 +615,11 @@ void ShowModeScreen::onMediaStateChanged(const QString& id, MediaState state) {
             }
         }
     }
+}
+
+void ShowModeScreen::onAndroidStateChanged(const QString& id, AndroidState) {
+    int row = rowForRef("android", id);
+    if (row >= 0) updateRow(row);
 }
 
 void ShowModeScreen::onLogMessage(const QString& formatted) {
@@ -605,4 +660,5 @@ void ShowModeScreen::showEvent(QShowEvent* event) {
     loadStageConfig();
     updateStageControls();
     loadAndSync();
+    m_adb->detectDevice();
 }

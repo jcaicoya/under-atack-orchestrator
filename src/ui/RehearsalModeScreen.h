@@ -41,18 +41,13 @@ private:
     void buildUI();
     void syncAndRefresh();
 
-    // Rundown (Qt apps + media)
+    // Rundown (Qt apps + Android + media)
     void populateTable();
     void updateRow(int row);
     int  rowForRef(const QString& type, const QString& id) const;
     const AppEntry*   appEntryForId(const QString& id) const;
-    const MediaEntry* mediaEntryForId(const QString& id) const;
-
-    // Android apps
-    void populateAndroidTable();
-    void updateAndroidRow(const QString& id);
-    int  androidRowForId(const QString& id) const;
     const AndroidEntry* androidEntryForId(const QString& id) const;
+    const MediaEntry* mediaEntryForId(const QString& id) const;
 
     // Stage
     void updateStageControls();
@@ -80,7 +75,6 @@ private:
     QPushButton*   m_stageActivateBtn = nullptr;
 
     QLabel*        m_adbStatusLabel = nullptr;
-    QTableWidget*  m_table         = nullptr;
-    QTableWidget*  m_androidTable  = nullptr;
-    QTextEdit*     m_logPanel      = nullptr;
+    QTableWidget*  m_table          = nullptr;
+    QTextEdit*     m_logPanel       = nullptr;
 };

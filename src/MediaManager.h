@@ -13,7 +13,7 @@ enum class MediaState { Stopped, Playing, Error };
 class MediaManager : public QObject {
     Q_OBJECT
 public:
-    explicit MediaManager(QObject* parent = nullptr);
+    explicit MediaManager(const QString& packageRoot, QObject* parent = nullptr);
     ~MediaManager() override;
 
     void loadMedia(const QList<MediaEntry>& items);
@@ -32,6 +32,7 @@ signals:
 private:
     void setState(const QString& id, MediaState newState);
     void ensurePlayer(const QString& id, const MediaEntry& entry);
+    QString resolve(const QString& path) const;
 
     struct MediaRuntime {
         MediaState    state       = MediaState::Stopped;
@@ -40,6 +41,7 @@ private:
         QVideoWidget* videoWidget = nullptr;
     };
 
+    QString                     m_workspaceRoot;
     QRect                       m_stageGeometry;
     QList<MediaEntry>           m_entries;
     QMap<QString, MediaRuntime> m_runtimes;

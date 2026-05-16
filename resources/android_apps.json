@@ -14,6 +14,13 @@
       "package": "com.cuarzopolar.password",
       "activity": ".MainActivity",
       "wsPort": 8767
+    },
+    {
+      "id": "phishing_android",
+      "name": "Phishing Android",
+      "package": "com.cuarzopolar.phishing",
+      "activity": ".MainActivity",
+      "wsPort": 8769
     }
   ]
 }

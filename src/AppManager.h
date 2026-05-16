@@ -41,7 +41,7 @@ private:
     QString resolve(const QString& relativePath) const;
     QStringList argsFor(const AppEntry& e, AppLaunchMode launchMode) const;
 
-    QString                   m_packageRoot;
+    QString                   m_workspaceRoot;
     QList<AppEntry>           m_entries;
     QMap<QString, AppRuntime> m_runtimes;
     int                       m_stageScreenIndex = -1;

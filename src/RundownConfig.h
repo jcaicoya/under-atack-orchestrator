@@ -4,7 +4,7 @@
 #include <QStringList>
 
 struct RundownItem {
-    QString type;    // "app" or "media"
+    QString type;    // "app", "android", or "media"
     QString ref;     // id of the referenced entry
 };
 
@@ -12,9 +12,12 @@ class RundownConfig {
 public:
     bool loadFromFile(const QString& path);
     bool saveToFile(const QString& path) const;
+    static bool copyDefaultTo(const QString& path);
 
-    // Adds new app/media ids not yet in the rundown (disabled), removes stale refs.
-    void syncWithLibraries(const QStringList& appIds, const QStringList& mediaIds);
+    // Adds new Qt/Android/media ids not yet in the rundown, removes stale refs.
+    void syncWithLibraries(const QStringList& appIds,
+                           const QStringList& androidIds,
+                           const QStringList& mediaIds);
 
     const QList<RundownItem>& items() const { return m_items; }
     void setItems(const QList<RundownItem>& items) { m_items = items; }

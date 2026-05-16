@@ -1,10 +1,12 @@
 #include "AppManager.h"
+#include "WorkspacePaths.h"
 #include <QDir>
 #include <QFileInfo>
 #include <algorithm>
 
 AppManager::AppManager(const QString& packageRoot, QObject* parent)
-    : QObject(parent), m_packageRoot(packageRoot) {}
+    : QObject(parent)
+    , m_workspaceRoot(WorkspacePaths::findWorkspaceRoot(packageRoot)) {}
 
 void AppManager::setStageScreen(int screenIndex) {
     m_stageScreenIndex = screenIndex;
@@ -28,7 +30,9 @@ void AppManager::setState(const QString& id, AppState newState) {
 }
 
 QString AppManager::resolve(const QString& relativePath) const {
-    return QDir(m_packageRoot).filePath(relativePath);
+    if (QFileInfo(relativePath).isAbsolute())
+        return relativePath;
+    return QDir(m_workspaceRoot).filePath(relativePath);
 }
 
 QStringList AppManager::argsFor(const AppEntry& e, AppLaunchMode launchMode) const {

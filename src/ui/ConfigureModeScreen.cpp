@@ -1,5 +1,7 @@
 #include "ConfigureModeScreen.h"
+#include "DefaultConfigUtils.h"
 #include "Logger.h"
+#include "WorkspacePaths.h"
 #include "CyberTheme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -24,8 +26,6 @@
 #include <QJsonObject>
 #include <QFile>
 #include <QTabWidget>
-
-// ---------- helpers ----------------------------------------------------------
 
 static QString appStateLabel(AppState s) {
     switch (s) {
@@ -167,10 +167,11 @@ static const QString TABLE_STYLE = QStringLiteral(R"QSS(
 ConfigureModeScreen::ConfigureModeScreen(const QString& packageRoot, QWidget* parent)
     : QWidget(parent)
     , m_packageRoot(packageRoot)
+    , m_workspaceRoot(WorkspacePaths::findWorkspaceRoot(packageRoot))
     , m_appManager(new AppManager(packageRoot, this))
     , m_adb(new AdbManager(this))
     , m_androidManager(new AndroidManager(m_adb, this))
-    , m_mediaManager(new MediaManager(this))
+    , m_mediaManager(new MediaManager(packageRoot, this))
 {
     setFocusPolicy(Qt::StrongFocus);
 
@@ -515,8 +516,9 @@ void ConfigureModeScreen::applyAppsChanges() {
 }
 
 void ConfigureModeScreen::addApp() {
+    const QString startDir = WorkspacePaths::preferredWorkspaceChildDir(m_workspaceRoot, "dist-qt");
     QString exePath = QFileDialog::getOpenFileName(
-        this, "Seleccionar ejecutable", m_packageRoot, "Executables (*.exe)");
+        this, "Seleccionar ejecutable", startDir, "Executables (*.exe)");
     if (exePath.isEmpty()) return;
 
     QFileInfo fi(exePath);
@@ -524,7 +526,7 @@ void ConfigureModeScreen::addApp() {
     e.id               = fi.completeBaseName();
     e.name             = fi.completeBaseName();
     e.executable       = fi.fileName();
-    e.workingDirectory = fi.absolutePath();
+    e.workingDirectory = WorkspacePaths::relativizeToWorkspace(m_workspaceRoot, fi.absolutePath());
 
     if (QMessageBox::question(this, "Añadir aplicación Qt",
             QString("¿Añadir '%1'?\n\nEjecutable:  %2\nDirectorio: %3")
@@ -547,8 +549,9 @@ void ConfigureModeScreen::editApp(const QString& id) {
     }
 
     const AppEntry& current = m_appsConfig.apps()[ci];
-    QString startDir = QFileInfo::exists(current.workingDirectory)
-        ? current.workingDirectory : m_packageRoot;
+    const QString currentWorkingDir = WorkspacePaths::absoluteFromWorkspace(m_workspaceRoot, current.workingDirectory);
+    QString startDir = QFileInfo::exists(currentWorkingDir)
+        ? currentWorkingDir : m_packageRoot;
     QString exePath = QFileDialog::getOpenFileName(
         this, "Seleccionar ejecutable", startDir, "Executables (*.exe)");
     if (exePath.isEmpty()) return;
@@ -556,7 +559,7 @@ void ConfigureModeScreen::editApp(const QString& id) {
     QFileInfo fi(exePath);
     AppEntry updated         = current;
     updated.executable       = fi.fileName();
-    updated.workingDirectory = fi.absolutePath();
+    updated.workingDirectory = WorkspacePaths::relativizeToWorkspace(m_workspaceRoot, fi.absolutePath());
 
     if (QMessageBox::question(this, "Actualizar aplicación Qt",
             QString("¿Actualizar '%1'?\n\nEjecutable:  %2\nDirectorio: %3")
@@ -755,6 +758,11 @@ void ConfigureModeScreen::deleteAndroidApp(const QString& id) {
 
 void ConfigureModeScreen::loadMediaConfig() {
     m_mediaConfigPath = QDir(m_packageRoot).filePath("config/media.json");
+    if (!QFileInfo::exists(m_mediaConfigPath)) {
+        Logger::instance().log("config/media.json not found — creating default.");
+        if (!MediaConfig::copyDefaultTo(m_mediaConfigPath))
+            Logger::instance().log("WARNING: Could not write default media config.");
+    }
     if (!m_mediaConfig.loadFromFile(m_mediaConfigPath)) {
         Logger::instance().log("ERROR: Failed to parse config/media.json.");
         return;
@@ -843,8 +851,9 @@ void ConfigureModeScreen::applyMediaChanges() {
 }
 
 void ConfigureModeScreen::addMedia() {
+    const QString startDir = WorkspacePaths::preferredWorkspaceChildDir(m_workspaceRoot, "dist-multimedia");
     QString filePath = QFileDialog::getOpenFileName(
-        this, "Seleccionar archivo multimedia", m_packageRoot,
+        this, "Seleccionar archivo multimedia", startDir,
         "Archivos multimedia (*.mp4 *.mov *.avi *.mkv *.webm *.mp3 *.wav *.ogg *.flac *.aac *.m4a)");
     if (filePath.isEmpty()) return;
 
@@ -853,7 +862,7 @@ void ConfigureModeScreen::addMedia() {
     e.id   = fi.completeBaseName();
     e.name = fi.completeBaseName();
     e.type = mediaTypeForPath(filePath);
-    e.path = fi.absoluteFilePath();
+    e.path = WorkspacePaths::relativizeToWorkspace(m_workspaceRoot, fi.absoluteFilePath());
 
     if (QMessageBox::question(this, "Añadir multimedia",
             QString("¿Añadir '%1'?\n\nArchivo: %2\nTipo: %3").arg(e.name, e.path, e.type))
@@ -875,8 +884,8 @@ void ConfigureModeScreen::editMedia(const QString& id) {
     }
 
     const MediaEntry& current = m_mediaConfig.items()[ci];
-    QString startDir = QFileInfo(current.path).absolutePath();
-    if (!QFileInfo::exists(startDir)) startDir = m_packageRoot;
+    QString startDir = QFileInfo(WorkspacePaths::absoluteFromWorkspace(m_workspaceRoot, current.path)).absolutePath();
+    if (!QFileInfo::exists(startDir)) startDir = WorkspacePaths::preferredWorkspaceChildDir(m_workspaceRoot, "dist-multimedia");
 
     QString filePath = QFileDialog::getOpenFileName(
         this, "Seleccionar archivo multimedia", startDir,
@@ -885,7 +894,7 @@ void ConfigureModeScreen::editMedia(const QString& id) {
 
     QFileInfo fi(filePath);
     MediaEntry updated = current;
-    updated.path = fi.absoluteFilePath();
+    updated.path = WorkspacePaths::relativizeToWorkspace(m_workspaceRoot, fi.absoluteFilePath());
     updated.type = mediaTypeForPath(filePath);
 
     if (QMessageBox::question(this, "Actualizar multimedia",
@@ -979,6 +988,8 @@ void ConfigureModeScreen::updateStageStatus() {
 
 void ConfigureModeScreen::loadStageConfig() {
     const QString path = QDir(m_packageRoot).filePath("config/stage.json");
+    if (!QFileInfo::exists(path))
+        DefaultConfigUtils::copyResourceDefaultTo(":/defaults/resources/stage.json", path);
     QFile f(path);
     if (!f.exists() || !f.open(QIODevice::ReadOnly)) return;
     QJsonParseError err;

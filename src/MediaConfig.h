@@ -13,6 +13,7 @@ class MediaConfig {
 public:
     bool loadFromFile(const QString& path);
     bool saveToFile(const QString& path) const;
+    static bool copyDefaultTo(const QString& destPath);
 
     const QList<MediaEntry>& items() const { return m_items; }
     void addItem(const MediaEntry& e)                { m_items.append(e); }

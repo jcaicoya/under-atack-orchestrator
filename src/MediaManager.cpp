@@ -1,4 +1,5 @@
 #include "MediaManager.h"
+#include "WorkspacePaths.h"
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include <QVideoWidget>
@@ -6,9 +7,12 @@
 #include <QGuiApplication>
 #include <QScreen>
 #include <QFileInfo>
+#include <QDir>
 #include <algorithm>
 
-MediaManager::MediaManager(QObject* parent) : QObject(parent) {}
+MediaManager::MediaManager(const QString& packageRoot, QObject* parent)
+    : QObject(parent)
+    , m_workspaceRoot(WorkspacePaths::findWorkspaceRoot(packageRoot)) {}
 
 MediaManager::~MediaManager() {
     for (auto& rt : m_runtimes) {
@@ -39,6 +43,12 @@ void MediaManager::setState(const QString& id, MediaState newState) {
 
 void MediaManager::setStageGeometry(const QRect& geo) {
     m_stageGeometry = geo;
+}
+
+QString MediaManager::resolve(const QString& path) const {
+    if (QFileInfo(path).isAbsolute())
+        return path;
+    return QDir(m_workspaceRoot).filePath(path);
 }
 
 void MediaManager::ensurePlayer(const QString& id, const MediaEntry& /*entry*/) {
@@ -89,8 +99,10 @@ void MediaManager::play(const QString& id) {
 
     ensurePlayer(id, entry);
 
-    if (!QFileInfo::exists(entry.path)) {
-        emit logMessage(QString("ERROR: Archivo no encontrado: %1").arg(entry.path));
+    const QString mediaPath = resolve(entry.path);
+
+    if (!QFileInfo::exists(mediaPath)) {
+        emit logMessage(QString("ERROR: Archivo no encontrado: %1").arg(mediaPath));
         setState(id, MediaState::Error);
         return;
     }
@@ -141,8 +153,8 @@ void MediaManager::play(const QString& id) {
     }
 
     emit logMessage(QString("Reproduciendo %1...").arg(entry.name));
-    emit logMessage(QString("  Archivo: %1").arg(entry.path));
-    rt.player->setSource(QUrl::fromLocalFile(entry.path));
+    emit logMessage(QString("  Archivo: %1").arg(mediaPath));
+    rt.player->setSource(QUrl::fromLocalFile(mediaPath));
     rt.player->play();
 }
 

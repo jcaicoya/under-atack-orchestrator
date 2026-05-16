@@ -81,6 +81,7 @@ private:
     void applyMediaChanges();
 
     QString       m_packageRoot;
+    QString       m_workspaceRoot;
 
     // Stage
     StageWindow*  m_stageWindow       = nullptr;

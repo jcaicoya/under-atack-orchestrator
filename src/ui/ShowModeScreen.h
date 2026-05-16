@@ -7,6 +7,9 @@
 #include <QLabel>
 #include "AppConfig.h"
 #include "AppManager.h"
+#include "AndroidConfig.h"
+#include "AndroidManager.h"
+#include "AdbManager.h"
 #include "MediaConfig.h"
 #include "MediaManager.h"
 #include "RundownConfig.h"
@@ -30,6 +33,7 @@ protected:
 
 private slots:
     void onStateChanged(const QString& id, AppState state);
+    void onAndroidStateChanged(const QString& id, AndroidState state);
     void onMediaStateChanged(const QString& id, MediaState state);
     void onLogMessage(const QString& formatted);
 
@@ -50,16 +54,20 @@ private:
     void stopCurrentScene();
 
     const AppEntry*   appEntryForId(const QString& id) const;
+    const AndroidEntry* androidEntryForId(const QString& id) const;
     const MediaEntry* mediaEntryForId(const QString& id) const;
 
     QString        m_packageRoot;
     QString        m_rundownPath;
 
     AppConfig      m_appConfig;
+    AndroidConfig  m_androidConfig;
     MediaConfig    m_mediaConfig;
     RundownConfig  m_rundownConfig;   // only enabled items are shown
 
     AppManager*    m_appManager   = nullptr;
+    AdbManager*    m_adb          = nullptr;
+    AndroidManager* m_androidManager = nullptr;
     MediaManager*  m_mediaManager = nullptr;
 
     StageWindow*   m_stageWindow      = nullptr;

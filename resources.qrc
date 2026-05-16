@@ -1,7 +1,10 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/defaults">
-        <file>resources/apps_default.json</file>
-        <file>resources/android_default.json</file>
+        <file>resources/qt_apps.json</file>
+        <file>resources/android_apps.json</file>
+        <file>resources/media_files.json</file>
+        <file>resources/rundown.json</file>
+        <file>resources/stage.json</file>
     </qresource>
 </RCC>

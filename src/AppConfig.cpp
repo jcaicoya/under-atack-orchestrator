@@ -1,4 +1,5 @@
 #include "AppConfig.h"
+#include "DefaultConfigUtils.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -85,16 +86,5 @@ bool AppConfig::saveToFile(const QString& path) const {
 }
 
 bool AppConfig::copyDefaultTo(const QString& destPath) {
-    QFile src(":/defaults/resources/apps_default.json");
-    if (!src.open(QIODevice::ReadOnly))
-        return false;
-
-    QDir().mkpath(QFileInfo(destPath).dir().absolutePath());
-
-    QFile dst(destPath);
-    if (!dst.open(QIODevice::WriteOnly | QIODevice::Text))
-        return false;
-
-    dst.write(src.readAll());
-    return true;
+    return DefaultConfigUtils::copyResourceDefaultTo(":/defaults/resources/qt_apps.json", destPath);
 }

@@ -1,4 +1,5 @@
 #include "RehearsalModeScreen.h"
+#include "DefaultConfigUtils.h"
 #include "Logger.h"
 #include "CyberTheme.h"
 #include <QVBoxLayout>
@@ -126,7 +127,7 @@ RehearsalModeScreen::RehearsalModeScreen(const QString& packageRoot, QWidget* pa
     , m_appManager(new AppManager(packageRoot, this))
     , m_adb(new AdbManager(this))
     , m_androidManager(new AndroidManager(m_adb, this))
-    , m_mediaManager(new MediaManager(this))
+    , m_mediaManager(new MediaManager(packageRoot, this))
 {
     setFocusPolicy(Qt::StrongFocus);
 
@@ -186,7 +187,7 @@ void RehearsalModeScreen::buildUI() {
     stageBar->addStretch();
     root->addLayout(stageBar);
 
-    // Rundown table (Qt apps + media)
+    // Rundown table (Qt apps + Android + media)
     auto* rundownLabel = new QLabel("Rundown", this);
     rundownLabel->setObjectName("FieldLabel");
     root->addWidget(rundownLabel);
@@ -208,32 +209,13 @@ void RehearsalModeScreen::buildUI() {
     m_table->setStyleSheet(TABLE_STYLE);
     root->addWidget(m_table, 2);
 
-    // Android apps table
     auto* androidRow = new QHBoxLayout();
     androidRow->setSpacing(12);
-    auto* androidLabel = new QLabel("Apps Android", this);
-    androidLabel->setObjectName("FieldLabel");
-    androidRow->addWidget(androidLabel);
     m_adbStatusLabel = new QLabel("○ Sin dispositivo", this);
     m_adbStatusLabel->setObjectName("MutedLabel");
     androidRow->addWidget(m_adbStatusLabel);
     androidRow->addStretch();
     root->addLayout(androidRow);
-
-    m_androidTable = new QTableWidget(0, 4, this);
-    m_androidTable->setHorizontalHeaderLabels({"Aplicación", "Lanzar", "Parar", "Estado"});
-    m_androidTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_androidTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed); m_androidTable->setColumnWidth(1, 104);
-    m_androidTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Fixed); m_androidTable->setColumnWidth(2, 104);
-    m_androidTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Fixed); m_androidTable->setColumnWidth(3, 130);
-    m_androidTable->setSelectionMode(QAbstractItemView::NoSelection);
-    m_androidTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    m_androidTable->setFocusPolicy(Qt::NoFocus);
-    m_androidTable->verticalHeader()->setVisible(false);
-    m_androidTable->setShowGrid(false);
-    m_androidTable->setSortingEnabled(false);
-    m_androidTable->setStyleSheet(TABLE_STYLE);
-    root->addWidget(m_androidTable, 1);
 
     // Log
     m_logPanel = new QTextEdit(this);
@@ -309,6 +291,8 @@ void RehearsalModeScreen::onActivateStage() {
 
 void RehearsalModeScreen::loadStageConfig() {
     const QString path = QDir(m_packageRoot).filePath("config/stage.json");
+    if (!QFileInfo::exists(path))
+        DefaultConfigUtils::copyResourceDefaultTo(":/defaults/resources/stage.json", path);
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly)) return;
     const int idx = QJsonDocument::fromJson(f.readAll()).object().value("screenIndex").toInt(0);
@@ -369,15 +353,17 @@ void RehearsalModeScreen::syncAndRefresh() {
 
     // Rundown
     m_rundownPath = QDir(m_packageRoot).filePath("config/rundown.json");
+    if (!QFileInfo::exists(m_rundownPath))
+        RundownConfig::copyDefaultTo(m_rundownPath);
     m_rundownConfig.loadFromFile(m_rundownPath);
-    QStringList appIds, mediaIds;
+    QStringList appIds, androidIds, mediaIds;
     for (const auto& e : m_appConfig.apps())    appIds   << e.id;
+    for (const auto& e : m_androidConfig.apps()) androidIds << e.id;
     for (const auto& e : m_mediaConfig.items()) mediaIds << e.id;
-    m_rundownConfig.syncWithLibraries(appIds, mediaIds);
+    m_rundownConfig.syncWithLibraries(appIds, androidIds, mediaIds);
     m_rundownConfig.saveToFile(m_rundownPath);
 
     populateTable();
-    populateAndroidTable();
     Logger::instance().log(QString("Ensayo: %1 elemento(s) en el rundown, %2 app(s) Android.")
         .arg(m_rundownConfig.items().size()).arg(m_androidConfig.apps().size()));
 }
@@ -422,6 +408,8 @@ void RehearsalModeScreen::populateTable() {
         QColor  typeColor;
         if (item.type == "app") {
             typeStr = "APP"; typeColor = QColor("#A0C8FF");
+        } else if (item.type == "android") {
+            typeStr = "ANDROID"; typeColor = QColor("#80E0A0");
         } else {
             bool isVideo = false;
             if (const auto* e = mediaEntryForId(item.ref)) isVideo = (e->type == "video");
@@ -437,6 +425,8 @@ void RehearsalModeScreen::populateTable() {
         QString name = item.ref;
         if (item.type == "app") {
             if (const auto* e = appEntryForId(item.ref)) name = e->name;
+        } else if (item.type == "android") {
+            if (const auto* e = androidEntryForId(item.ref)) name = e->name;
         } else {
             if (const auto* e = mediaEntryForId(item.ref)) name = e->name;
         }
@@ -455,6 +445,11 @@ void RehearsalModeScreen::populateTable() {
             m_table->setCellWidget(row, 3, makeLaunchCell(demoBtn, liveBtn, this));
             connect(demoBtn, &QPushButton::clicked, this, [this, ref]() { m_appManager->start(ref, AppLaunchMode::Demo); });
             connect(liveBtn, &QPushButton::clicked, this, [this, ref]() { m_appManager->start(ref, AppLaunchMode::Live); });
+        } else if (type == "android") {
+            auto* actionBtn = new QPushButton("Lanzar", this);
+            actionBtn->setFocusPolicy(Qt::NoFocus);
+            m_table->setCellWidget(row, 3, actionBtn);
+            connect(actionBtn, &QPushButton::clicked, this, [this, ref]() { m_androidManager->start(ref); });
         } else {
             auto* actionBtn = new QPushButton("Iniciar", this);
             actionBtn->setFocusPolicy(Qt::NoFocus);
@@ -468,8 +463,9 @@ void RehearsalModeScreen::populateTable() {
         stopBtn->setEnabled(false);
         m_table->setCellWidget(row, 4, stopBtn);
         connect(stopBtn, &QPushButton::clicked, this, [this, ref, type]() {
-            if (type == "app") m_appManager->stop(ref);
-            else               m_mediaManager->stop(ref);
+            if (type == "app")          m_appManager->stop(ref);
+            else if (type == "android") m_androidManager->stop(ref);
+            else                        m_mediaManager->stop(ref);
         });
 
         // Col 5: Estado
@@ -498,6 +494,12 @@ void RehearsalModeScreen::updateRow(int row) {
         stateColor = appStateColor(s);
         canAction  = (s == AppState::Stopped || s == AppState::Error);
         canStop    = (s == AppState::Starting || s == AppState::Running || s == AppState::Stopping);
+    } else if (item.type == "android") {
+        AndroidState s = m_androidManager->state(item.ref);
+        stateLabel = androidStateLabel(s);
+        stateColor = androidStateColor(s);
+        canAction  = (s == AndroidState::Stopped);
+        canStop    = (s == AndroidState::Running);
     } else {
         MediaState s = m_mediaManager->state(item.ref);
         stateLabel = mediaStateLabel(s);
@@ -527,69 +529,14 @@ const AppEntry* RehearsalModeScreen::appEntryForId(const QString& id) const {
     return nullptr;
 }
 
-const MediaEntry* RehearsalModeScreen::mediaEntryForId(const QString& id) const {
-    for (const auto& e : m_mediaConfig.items())
+const AndroidEntry* RehearsalModeScreen::androidEntryForId(const QString& id) const {
+    for (const auto& e : m_androidConfig.apps())
         if (e.id == id) return &e;
     return nullptr;
 }
 
-// ---------- Android table ----------------------------------------------------
-
-void RehearsalModeScreen::populateAndroidTable() {
-    m_androidTable->setRowCount(0);
-    const auto& entries = m_androidManager->entries();
-
-    for (int row = 0; row < entries.size(); ++row) {
-        const AndroidEntry& e = entries[row];
-        m_androidTable->insertRow(row);
-
-        auto* nameItem = new QTableWidgetItem(e.name);
-        nameItem->setForeground(CyberTheme::color(CyberTheme::TextPrimary));
-        nameItem->setToolTip(e.package);
-        m_androidTable->setItem(row, 0, nameItem);
-
-        auto* launchBtn = new QPushButton("Lanzar", this);
-        auto* stopBtn   = new QPushButton("Parar",  this);
-        launchBtn->setFocusPolicy(Qt::NoFocus);
-        stopBtn->setFocusPolicy(Qt::NoFocus);
-        stopBtn->setEnabled(false);
-
-        const QString id = e.id;
-        connect(launchBtn, &QPushButton::clicked, this, [this, id]() { m_androidManager->start(id); });
-        connect(stopBtn,   &QPushButton::clicked, this, [this, id]() { m_androidManager->stop(id); });
-        m_androidTable->setCellWidget(row, 1, launchBtn);
-        m_androidTable->setCellWidget(row, 2, stopBtn);
-
-        auto* stateItem = new QTableWidgetItem(androidStateLabel(AndroidState::Stopped));
-        stateItem->setForeground(androidStateColor(AndroidState::Stopped));
-        m_androidTable->setItem(row, 3, stateItem);
-
-        m_androidTable->setRowHeight(row, 44);
-    }
-}
-
-void RehearsalModeScreen::updateAndroidRow(const QString& id) {
-    int row = androidRowForId(id);
-    if (row < 0) return;
-    AndroidState s = m_androidManager->state(id);
-    if (auto* item = m_androidTable->item(row, 3)) {
-        item->setText(androidStateLabel(s));
-        item->setForeground(androidStateColor(s));
-    }
-    bool running = (s == AndroidState::Running);
-    if (auto* b = qobject_cast<QPushButton*>(m_androidTable->cellWidget(row, 1))) b->setEnabled(!running);
-    if (auto* b = qobject_cast<QPushButton*>(m_androidTable->cellWidget(row, 2))) b->setEnabled(running);
-}
-
-int RehearsalModeScreen::androidRowForId(const QString& id) const {
-    const auto& entries = m_androidManager->entries();
-    for (int i = 0; i < entries.size(); ++i)
-        if (entries[i].id == id) return i;
-    return -1;
-}
-
-const AndroidEntry* RehearsalModeScreen::androidEntryForId(const QString& id) const {
-    for (const auto& e : m_androidConfig.apps())
+const MediaEntry* RehearsalModeScreen::mediaEntryForId(const QString& id) const {
+    for (const auto& e : m_mediaConfig.items())
         if (e.id == id) return &e;
     return nullptr;
 }
@@ -610,7 +557,8 @@ void RehearsalModeScreen::onAppStateChanged(const QString& id, AppState state) {
 }
 
 void RehearsalModeScreen::onAndroidStateChanged(const QString& id, AndroidState) {
-    updateAndroidRow(id);
+    int row = rowForRef("android", id);
+    if (row >= 0) updateRow(row);
 }
 
 void RehearsalModeScreen::onMediaStateChanged(const QString& id, MediaState state) {

@@ -1,4 +1,5 @@
 #include "MediaConfig.h"
+#include "DefaultConfigUtils.h"
 #include <QFile>
 #include <QDir>
 #include <QFileInfo>
@@ -50,4 +51,8 @@ bool MediaConfig::saveToFile(const QString& path) const {
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return false;
     file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
     return true;
+}
+
+bool MediaConfig::copyDefaultTo(const QString& destPath) {
+    return DefaultConfigUtils::copyResourceDefaultTo(":/defaults/resources/media_files.json", destPath);
 }

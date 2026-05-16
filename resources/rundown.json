@@ -1,26 +1,46 @@
 [
-    {
-        "ref": "CuarzoPolar_BajoAtaque_Trailer_01",
-        "type": "media"
-    },
-    {
-        "ref": "permission",
-        "type": "app"
-    },
-    {
-        "ref": "disfraz-animado",
-        "type": "media"
-    },
-    {
-        "ref": "qr",
-        "type": "app"
-    },
-    {
-        "ref": "wifi",
-        "type": "app"
-    },
-    {
-        "ref": "password",
-        "type": "app"
-    }
+  {
+    "ref": "bajo_ataque_trailer_01",
+    "type": "media"
+  },
+  {
+    "ref": "cuarzito_race",
+    "type": "app"
+  },
+  {
+    "ref": "permission_android",
+    "type": "android"
+  },
+  {
+    "ref": "permission",
+    "type": "app"
+  },
+  {
+    "ref": "animated_disguise",
+    "type": "media"
+  },
+  {
+    "ref": "qr",
+    "type": "app"
+  },
+  {
+    "ref": "wifi",
+    "type": "app"
+  },
+  {
+    "ref": "password_android",
+    "type": "android"
+  },
+  {
+    "ref": "password",
+    "type": "app"
+  },
+  {
+    "ref": "phishing_android",
+    "type": "android"
+  },
+  {
+    "ref": "phishing",
+    "type": "app"
+  }
 ]

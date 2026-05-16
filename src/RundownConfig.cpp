@@ -1,4 +1,5 @@
 #include "RundownConfig.h"
+#include "DefaultConfigUtils.h"
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -44,11 +45,18 @@ bool RundownConfig::saveToFile(const QString& path) const {
     return true;
 }
 
-void RundownConfig::syncWithLibraries(const QStringList& appIds, const QStringList& mediaIds) {
+bool RundownConfig::copyDefaultTo(const QString& path) {
+    return DefaultConfigUtils::copyResourceDefaultTo(":/defaults/resources/rundown.json", path);
+}
+
+void RundownConfig::syncWithLibraries(const QStringList& appIds,
+                                      const QStringList& androidIds,
+                                      const QStringList& mediaIds) {
     // Remove items whose ref no longer exists in any library
     m_items.erase(
         std::remove_if(m_items.begin(), m_items.end(), [&](const RundownItem& item) {
             if (item.type == "app")   return !appIds.contains(item.ref);
+            if (item.type == "android") return !androidIds.contains(item.ref);
             if (item.type == "media") return !mediaIds.contains(item.ref);
             return true;
         }),
@@ -59,6 +67,13 @@ void RundownConfig::syncWithLibraries(const QStringList& appIds, const QStringLi
             [&](const RundownItem& i) { return i.type == "app" && i.ref == id; });
         if (!found)
             m_items.append({"app", id});
+    }
+
+    for (const QString& id : androidIds) {
+        bool found = std::any_of(m_items.begin(), m_items.end(),
+            [&](const RundownItem& i) { return i.type == "android" && i.ref == id; });
+        if (!found)
+            m_items.append({"android", id});
     }
 
     for (const QString& id : mediaIds) {
