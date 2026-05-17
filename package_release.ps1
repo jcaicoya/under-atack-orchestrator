@@ -94,6 +94,7 @@ foreach ($folder in @("config", "apps", "media", "sounds", "lights", "logs", "to
 }
 
 Copy-Item "$out\under_attack_orchestrator.exe" $staging
+Copy-Item "$root\RUNBOOK.md" $staging
 
 # Qt DLLs (all that were deployed by CMakeLists.txt post-build)
 foreach ($dll in (Get-ChildItem "$out\Qt6*.dll")) {
